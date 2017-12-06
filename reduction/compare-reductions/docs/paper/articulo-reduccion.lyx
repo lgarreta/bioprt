@@ -1,0 +1,918 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass article
+\begin_preamble
+\usepackage[T1]{fontenc}
+\usepackage{charter}
+\end_preamble
+\use_default_options true
+\maintain_unincluded_children false
+\language spanish
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language french
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Reducción de Pasos de Tiempo en Trajectorias de Plegamiento de Proteínas
+\end_layout
+
+\begin_layout Section
+Resumen
+\end_layout
+
+\begin_layout Standard
+El análisis de las trayectorías de dinámica molecular para proteínas es
+ de gran importancia ya que nos muestra como la proteína cambia durante
+ su proceso de plegamiento.
+ Generalmente, las simulaciones muestran como una proteína inicia en un
+ estado no-plegado
+\emph on
+ 
+\emph default
+y a través de distintas transformaciones durante el tiempo de su plegamiento,
+ esta alcanza un estado más estable (
+\emph on
+estado nativo).
+
+\emph default
+ En este trabajo implementamos distintas técnicas para reducir los pasos
+ de tiempo de los datos provenientes de las simulación con dinámica molecular
+ del plegamiento de proteínas.
+ Los resultados de las distintas técnicas se comparan mediante dos métodos:
+ uno donde se calculan y muestran los puntos críticos de las trayectorias
+ resultantes; y otro donde se calcula la dimensión fractal de las trayectorias.
+ El objetivo al final es obtener la trayectoria reducida más representativa
+ de tal manera que el número de pasos de tiempo se haya reducido considerablemen
+te y por lo tanto los análisis se puedan llevar a cabo más rápidamente.
+\end_layout
+
+\begin_layout Section
+Introducción
+\end_layout
+
+\begin_layout Subsection
+Estado del Arte
+\end_layout
+
+\begin_layout Subsubsection
+Trayectorías de Proteínas
+\end_layout
+
+\begin_layout Enumerate
+Trayectorías por Dinámica Molecular
+\end_layout
+
+\begin_deeper
+\begin_layout Enumerate
+Bacckground de que son y cuales son sus característics
+\end_layout
+
+\begin_layout Enumerate
+Mensión de las trayectorias públicas disponibles: caso de Anton (12 proteínas)
+ y caso de folding@home (proteína villin)
+\end_layout
+
+\end_deeper
+\begin_layout Enumerate
+Trayectorías por otros métodos (desplegamiento)
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+Como se realizan y características
+\end_layout
+
+\begin_layout Itemize
+Caso de las trayectorias generadas por el servidor Parasol de la U de Texas,
+ profe.
+ Amato
+\end_layout
+
+\end_deeper
+\begin_layout Subsubsection
+Reducción de la dimensionalidad para trayectorias de proteínas
+\end_layout
+
+\begin_layout Standard
+Corto análisis de lo que presentan los siguientes artículos y que tienen
+ o que no tienen frente a las técnicas que planteamos.
+ Esencialmente, estos trabajos reducen la dimensionalidad capturando característ
+icas relevantes de las trayectorías pero sin buscar preservar la forma en
+ que se lleva el plegamiento, es decir, obtienen los momentos más relevantes
+ mientras que nosotros buscamos que la trayectoría reducida conserve en
+ lo posible los eventos que la caracterízan tales como los momentos donde
+ la proteína se pliega y se vuelve a desplegar (mínimos y máximos en los
+ puntos críticos).
+\end_layout
+
+\begin_layout Itemize
+Rajan, A., Freddolino, P.
+ L., & Schulten, K.
+ (2010).
+ Going beyond clustering in MD trajectory analysis: An application to villin
+ headpiece folding.
+ PLoS ONE, 5(4), e9890.
+ http://doi.org/10.1371/journal.pone.0009890
+\end_layout
+
+\begin_layout Itemize
+Eitrich, T., Mohanty, S., Xiao, X., & Hansmann, U.
+ H.
+ E.
+ (2007).
+ Dimensionality Reduction Techniques for Protein Folding Trajectories.
+ From Computational Biophysics to Systems Biology (CBSB07), 36, 99–102.
+\end_layout
+
+\begin_layout Itemize
+Plaku, E., Stamati, H., Clementi, C., & Kavraki, L.
+ E.
+ (2c007).
+ Fast and reliable analysis of molecular motion using proximity relations
+ and dimensionality reduction.
+ Proteins: Structure, Function, and Bioinformatics, 67(4), 897–907.
+\end_layout
+
+\begin_layout Section
+Datos y Métodos
+\end_layout
+
+\begin_layout Subsection
+Trayectorias simuladas de plegamiento de proteínas
+\end_layout
+
+\begin_layout Itemize
+Las CARACTERISTICAS de las trayectorias y proteínas que utilizamos para
+ realizar las reducciones.
+ corresponden a las trayectorias puestas al público por el grupo del Dr
+ David Shaw (Anton).
+ Completar la información sobre estas trayectorías, creo que algo había
+ en mi tesis de grado o sino de los paper originales o sino de otros papers
+ que hayan utilizado estas trayectorias y den una breve descripción de estos
+ conjunto.
+ Datos que importan es tipo de simulación, time step, maquína o servidor,
+ proteínas simuladas.
+ Todo con sus referencias principalmente hacia los papers de David Shaw
+ donde presenta las simulaciones.
+\end_layout
+
+\begin_layout Itemize
+El primer caso es el la 2JFO, toca hablar de esta.
+ Y si existe un segundo caso después se agrega.
+\end_layout
+
+\begin_layout Subsection
+Reducciones
+\end_layout
+
+\begin_layout Standard
+La forma de reducir las trayectorias se realiza a travez de particionamientos
+ con un número de conformaciones que corresponden al orden que se busca
+ reducir, es decir una reducción de 
+\emph on
+nanos 
+\emph default
+a 
+\emph on
+picos
+\emph default
+ (en orden de 1000), dividirá la trayectoría en particiones de 1000 conformacion
+es a partir de la cual se seleccionará una conformación representativa de
+ acuerdo a una de las siguientes técnicas: agrupamiento alrededor de medoides;
+ agrupamiento por jerarquías; selección estática, y selección aleatoria.
+ 
+\end_layout
+
+\begin_layout Standard
+El agrupamiento alrededor de medoides particiona los datos en 
+\emph on
+k 
+\emph default
+grupos y selecciona de ese grupo el 
+\emph on
+medoide
+\emph default
+ o conformación más cercana a todos las demás conformaciones.
+ Para nuestro caso, la partición corresponde al orden de la reducción que
+ se quiera realizar, es decir si se va a reducir de 
+\emph on
+nanos 
+\emph default
+a 
+\emph on
+picos
+\emph default
+ (en orden de 1000), entonces se divide la trayectoría en particiones de
+ 1000 conformaciones y cada partición corresponde a uno de los 
+\emph on
+k 
+\emph default
+grupos de donde se selecciona el medoide.
+ Al final los medoides seleccionados corresponderán a la nueva trayectoria
+ reducida.
+\end_layout
+
+\begin_layout Standard
+El agrupamiento jerarquico alrededor de grupos, 
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+Aquí la descripción del método con hclust.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Finalmente, el agrupamiento estático selecciona la conformación de la mitad
+ del pedazo de trayectoria que corresponde a la partición.
+ Y el agrupamiento aleatorio selecciona una conformación al azar dentro
+ de las conformaciones de la partición.
+ En ambos métodos, la selección de la conformación no tiene en cuenta que
+ tan próxima o lejana esta está de las demás.
+\end_layout
+
+\begin_layout Subsection
+Validación
+\end_layout
+
+\begin_layout Subsubsection
+Validación por Puntos Críticos
+\end_layout
+
+\begin_layout Standard
+Hablar sobre el que se pretende y como se lleva el cálculo.
+ Por ahora es el único que he visto como medio para comprobar que tan buena
+ es una reducción Lo que se busca con este método es encontrar los puntos
+ críticos en la trayectoria principal (máximos y mínmos) y por cada trayectoria
+ reducida encontrarle los puntos críticos y compararlos, al final debe resultar
+ un conteo que se podría mostrar en una simple tabla
+\end_layout
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="5" columns="4">
+<features rotate="0" tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Máximos
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Mínimos
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Diferencia frente a la trayectoria completa
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Medoides
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Jerarquico
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Estatico
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Aleatorio
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename images/tmp-puntoscriticos.png
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Resultados
+\end_layout
+
+\begin_layout Subsection
+Reducción
+\end_layout
+
+\begin_layout Standard
+A continuación mostramos los gráficos de las trayectorias resultantes después
+ de la reducción.
+ El primer caso se realizó para la trayectoria de la proteína con código
+ PDB 2JFO 
+\emph on
+(ENTEROCOCCUS FAECALIS GLUTAMATE RACEMASE IN COMPLEX WITH D- AND L-GLUTAMATE).
+ 
+\emph default
+Las trayectorias que se muestran son: la trayectoria completa en la Fig.
+ a; por agrupamiento kmeans y selección de medoides en la Fig.
+ b; por agrupamiento jerarquico y selección de representativos en la Fig.
+ c; por selección estática en la Fig.
+ d; y por selección aleatoria en la Fig.
+ e.
+ La línea negra muestra la trayectoria reducida mientras que la línea roja
+ muestra la trayectoria de forma suavizada.
+ En general se observa que la forma de la trayectoria se conserva en todas
+ las reducciones.
+ 
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+Más observaciones partículares de cada gráfico, por ejemplo que una reducción
+ (e.g aleatoria) tiene puntos críticos más pronunciados que otra (e.g.
+ medoides.
+ Y otras observaciones de interés)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+setlength{
+\backslash
+tabcolsep}{6pt} % General space between cols (6pt standard)
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+renewcommand{
+\backslash
+arraystretch}{0.0} % General space between rows (1 standard)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\begin_inset Box Frameless
+position "t"
+hor_pos "c"
+has_inner_box 1
+inner_pos "t"
+use_parbox 0
+use_makebox 0
+width "100col%"
+special "none"
+height "1in"
+height_special "totalheight"
+status open
+
+\begin_layout Plain Layout
+\begin_inset Tabular
+<lyxtabular version="3" rows="5" columns="2">
+<features rotate="0" tabularvalignment="middle">
+<column alignment="left" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell multicolumn="1" alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+a.
+ Completa
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Box Frameless
+position "c"
+hor_pos "c"
+has_inner_box 1
+inner_pos "c"
+use_parbox 0
+use_makebox 0
+width "85col%"
+special "none"
+height "1in"
+height_special "totalheight"
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename images/2jf0-full.pdf
+	lyxscale 30
+	scale 30
+	BoundingBox 0bp 45bp 1008bp 445bp
+	clip
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+a.
+ Jerarquica
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\size large
+\color red
+Aquí la gráfica de la trayectoria resultante por clustering jerarquico
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+b.
+ Medoides
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Box Frameless
+position "c"
+hor_pos "c"
+has_inner_box 1
+inner_pos "c"
+use_parbox 0
+use_makebox 0
+width "85col%"
+special "none"
+height "1in"
+height_special "totalheight"
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename images/2jfo-red10-medoids.pdf
+	lyxscale 30
+	scale 30
+	BoundingBox 0bp 45bp 1008bp 445bp
+	clip
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+c.
+ Estática
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Box Frameless
+position "c"
+hor_pos "c"
+has_inner_box 1
+inner_pos "c"
+use_parbox 0
+use_makebox 0
+width "85col%"
+special "none"
+height "1in"
+height_special "totalheight"
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename images/2jfo-red10-static.pdf
+	lyxscale 30
+	scale 30
+	BoundingBox 0bp 45bp 1008bp 445bp
+	clip
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+d.
+ Aleatoria
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Box Frameless
+position "c"
+hor_pos "c"
+has_inner_box 1
+inner_pos "c"
+use_parbox 0
+use_makebox 0
+width "85col%"
+special "none"
+height "1in"
+height_special "totalheight"
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename images/2jfo-red10-random.pdf
+	lyxscale 30
+	scale 30
+	BoundingBox 0bp 0bp 1008bp 445bp
+	clip
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Trayectoria de plegamiento de la Proteína 2JOF y cuatro trayectorias reducidas.
+ Las reducciones corresponde al orden de un 1ns es decir 1000 pasos se reducen
+ a 1 solo paso.
+ 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Análisis
+\end_layout
+
+\begin_layout Standard
+Aquí va el cálculo de los puntos críticos que debe implementarse.
+ Yo encontré una función en R que creo hace todo ese cálculo y creo que
+ necesita como argumentos los valores de donde salen las gráficas, es decir,
+ el nombre de la proteína y su valor RMSD que debería calcularse cuando
+ se hace la reducción.
+\end_layout
+
+\begin_layout Section
+Referencias
+\end_layout
+
+\begin_layout Standard
+Las referencias se deberían manejar en algún manejador, mejor dicho utilizar
+ MendeleyDesktop, yo ya tengo varias de estas sino todas y a medida que
+ aparezca yo puedo adicionarla a Mendeley y tener compartido el repositorio.
+ La forma de pegarlas aca es exportarla a un archivo BibTex y adicionarlo,
+ así
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+bibfiles "reduction-refs"
+options "plain"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

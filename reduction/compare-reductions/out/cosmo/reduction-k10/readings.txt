@@ -1,0 +1,5 @@
+Compare curves:
+  -https://www.researchgate.net/post/How_can_I_compare_the_shape_of_two_curves
+
+Compare fractals:
+  - Box-counting

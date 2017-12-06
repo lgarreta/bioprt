@@ -1,0 +1,328 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language spanish
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language french
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Algoritmos Rápido de Clustering para Trajectorias de Plegamiento de Proteínas
+\end_layout
+
+\begin_layout Section*
+Introducción
+\end_layout
+
+\begin_layout Description
+Contexto: Actualmente se están liberando con más frecuencia datos de simulacione
+s de plegamiento de proteínas para que la comunidad científica los analice
+ y avance en el entendimiento de este proceso.
+ Estas simulaciones alcanzan tiempos de simulación que antes no se lograban
+ debido a las limitaciones en los recursos computacionales.
+ Hace algunos años el proyecto folding@home [1] liberó varias trayectorias
+ de la simulación de la proteína Villin Headpiece la cual alcanzó el orden
+ de los microsegundos utilizando computación distribuida.
+ Más recientemente, el grupo de David Shaw liberó simulaciones de varias
+ proteínas en el orden de los milisegundos utilizando la supercomputadora
+ Anton diseñada especialmente para simular dinámica molecular [2].
+ Todas estas simulaciones se caracterizan por generar trayectorias que abarcan
+ miles o millones de conformaciones, lo cual por un lado es una gran ventaja
+ porque se tiene más detalle del proceso, pero así mismo es un problema
+ debido al tiempo y recursos computacionales necesarios para analizarlas.
+ 
+\end_layout
+
+\begin_layout Description
+Necesidad Para tratar este problema se buscan conjuntos de conformaciones
+ representativas, que generalmente utilizan métodos de agrupamiento que
+ construyen una matriz con las distancias entre cada una de las conformaciones,
+ usualmente se usa la distancia RMSD.
+ Estas agrupamientos se vuelven muy costosos en tiempo y recursos computacionale
+s cuando se trata de muchas conformaciones y por esta razón los algoritmos
+ buscan simplificar estos costos.
+ Una forma es reducir el número de átomos que comparar en las conformaciones
+ (solo carbonos alfa), otra forma es crear agrupamientos rápidos que no
+ tengan que comparar todas las conformaciones.
+ Este mismo problema pero no con estructuras de proteínas sino con secuencias
+ de ADN y proteínas se ha trabajado a través de agrupamientos rápidos basados
+ en el algoritmo de Hobohm&Sander.
+ Este algoritmo realiza un primer agrupamiento muy rápido sin comparar todas
+ las conformaciones para generar un conjunto de secuencias representativas,
+ luego realiza un segundo agrupamiento--mas detallado--con las conformaciones
+ representativas resultantes del agrupamiento rápido.
+\end_layout
+
+\begin_layout Description
+Tarea: Nosotros hemos tomado como base este algoritmo para crear un algoritmo
+ rápido de agrupamiento para el caso de las conformaciones 3D resultantes
+ de las trayectorias de simulaciones de plegamiento de proteínas que estamos
+ utilizando para reducir las trayectorias de plegamientos simuladas en la
+ supercomputadora Anton [2].
+ Las reducciones buscan realizar un cambio de escala del paso de simulación
+ mediante el agrupamiento de las conformaciones pertenecientes a un rango
+ de tiempo que determina una escala, por ejemplo llevar un paso de simulación
+ de picosegundos a nanosegundos, es decir reducir un orden de 1000.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Box Frameless
+position "t"
+hor_pos "c"
+has_inner_box 1
+inner_pos "t"
+use_parbox 0
+use_makebox 0
+width "100col%"
+special "none"
+height "1in"
+height_special "totalheight"
+status collapsed
+
+\begin_layout Subsection
+Contexto
+\end_layout
+
+\begin_layout Itemize
+El plegamiento de proteínas es un proceso que puede llevarle a la proteína
+ algunos milisegundos pero que al simularlo computacionalmente podría abarcar
+ tiempos supremamente mayores de días o meses.
+ Hasta hace algunos años las simulaciones reportadas eran de la escala de
+ algunos nanosegundos a microsegundos, sin embargo esto ha ido cambiando
+ con el surgimiento de nuevas técnicas y supercomputadoras diseñadas especialmen
+te para este tipo de simulaciones.
+ Por ejemplo, el proyecto folding@home [1], empleando una nueva técnica
+ de computación distribuida, a simulado el plegamiento de proteínas pequeñas
+ (36 residuos) en el orden de microsegundos (500 us), lo cual hasta hace
+ algunos años eran escalas de tiempo imposible de alcanzar.
+ Así mismo, la supercomputador Anton [2], diseñada especialmente para este
+ tipo de simulaciones, ha logrado simular el plegamiento de varias proteínas
+ (de 10 a 92 residuos) en el orden de los milisegundos.
+ 
+\end_layout
+
+\begin_layout Itemize
+Todas estas simulaciones producen miles o millones de conformaciones o 
+\emph on
+snapshots
+\emph default
+ que para su análisis computacional se necesita gran cantidad de tiempo
+ de máquina y recursos computacionales que muchas veces o son muy extensos
+ (horas o días) o no están disponibles fácilmente (supercomputadoras o clusters).
+ Par 
+\end_layout
+
+\begin_layout Itemize
+que pueden no estar disponibles y por lo tanto se necesita reducir esas
+ trayectorias 
+\end_layout
+
+\begin_layout Itemize
+Dependiendo del nivel de detalle con el que se quiera estudiar el plegamiento,
+ 
+\end_layout
+
+\begin_layout Itemize
+Con la 
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Note Note
+status open
+
+\begin_layout Itemize
+El procesamiento de grandes volúmenes de datos es generalmente un reto cuando
+ se trabaja en problemas de bioinformática.
+\end_layout
+
+\begin_layout Itemize
+La evolución de las técnicas ha conducido a que actualmente la disposición
+ de datos biológicos sea masiva.
+ 
+\end_layout
+
+\begin_layout Itemize
+El desafío ahora es evolucionar tanto en hardware como en software de una
+ manera tal que dichos datos se puedan procesar y obtener así información
+ con un sentido biológico
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+El supercomputador Anton es una máquina especialmente diseñada para simular
+ el plegamiento de la proteína, es decir simular los cambios en la estructura
+ tridimensional de una proteína en un periodo de un milisegundo, la cual
+ es una escala bastante superior comparado con simulaciones realizadas utilizand
+o otras técnicas y recursos.
+\end_layout
+
+\begin_layout Itemize
+Los resultados obtenidos se representan con la trayectoria de la proteína,
+ es decir, cientos o miles de secuencias de proteínas que indican la posición
+ de cada uno de sus átomos en un instante de tiempo.
+\end_layout
+
+\begin_layout Itemize
+En el caso de las proteínas el caso no es la excepción.
+ Cada vez más se tiene acceso a servidores con gran cantidad de secuencias
+ de proteínas listas para ser procesadas y analizadas.
+ Algunos centros de investigación, que cuentan con gran capacidad de cómputo,
+ colocan a disposición de la comunidad científica datos que han sido procesados
+ en sus máquinas, los cuales pueden ser accesados libremente a través de
+ una descarga o previa solicitud de los centros.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Antecedentes
+\end_layout
+
+\begin_layout Standard
+Describimos a continuación el algoritmo rápidos de agrupamiento propuesto
+ por Hobbon & Sander, mostrando sus principales características, después
+ describimos como algunas herramientas han implementado este algoritmo para
+ agrupar secuencias de ADN o de Proteínas, y finalmente planteamos los elementos
+ que tomamos de este algoritmo y de sus implementaciones para crear nuestro
+ algoritmo para agrupar conformaciones de proteínas de trayectorias de simulació
+n.
+\end_layout
+
+\begin_layout Subsection
+Algoritmo de Hobbon&Sander
+\end_layout
+
+\begin_layout Subsection
+Herramientas de Agrupamientos Rápidos para Secuencias (CD-Hit, UClust y
+ DNAClust)
+\end_layout
+
+\begin_layout Section
+Datos y Métodos
+\end_layout
+
+\begin_layout Standard
+Aquí planteamos nuestro algoritmo de agrupamiento rápidos de estructuras
+ de proteínas y después describimos las características de la trayectoría
+ que utilizamos para realizar la reducción.
+\end_layout
+
+\begin_layout Subsection
+Algoritmo Rápido de Agrupamiento de Estructuras de Proteínas
+\end_layout
+
+\begin_layout Subsection
+Trayectoria XXX de Plegamiento de Proteínas generada por Anton 
+\end_layout
+
+\begin_layout Section
+Resultados y Discusión
+\end_layout
+
+\begin_layout Standard
+Utilizando los datos de la trayectoria descrita en la sección 2, aquí mostramos
+ como estas escala escala al realizar agrupamientos de bloques de 1000,
+ es decir de picosegundos a nanosegundo y después a milisegundos.
+ A continuación mostramos los agrupamientos utilizando diferentes métodos
+ para de tres bloques de 1000 conformaciones de la trayectoria: el primer
+ bloque corresponde a las primeras 1000 conformaciones; el segundo bloque
+ corresponde a las 1000 conformaciones de la mitad; y el tercer bloque correspon
+de a las 1000 ultimas conformaciones.
+\end_layout
+
+\begin_layout Subsection
+Escalamiento de la trayectoría
+\end_layout
+
+\begin_layout Subsection
+Agrupamiento k-means
+\end_layout
+
+\begin_layout Subsection
+Agrupamiento jerárquico
+\end_layout
+
+\begin_layout Subsection
+Agrupamiento rápido
+\end_layout
+
+\begin_layout Section
+Conclusiones
+\end_layout
+
+\begin_layout Section*
+Referencias
+\end_layout
+
+\end_body
+\end_document

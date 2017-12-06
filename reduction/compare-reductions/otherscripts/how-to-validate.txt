@@ -1,0 +1,3 @@
+Validación Redución por Clustering Herarquico:
+----------------------------------------------
+- Depending of the selected number of cluster (k) each representative structure for each cluster must represent a specific time. For example if k=4 then the clustering will result in four groups and spliting the frame in four sections, each group must represent a section.

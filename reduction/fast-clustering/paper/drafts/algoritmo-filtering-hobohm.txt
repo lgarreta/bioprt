@@ -1,0 +1,44 @@
+This reducing trejectory approach uses the idea of the Hobohm's algorithms, which sorts a redundant set of sequences by sorting them by length in descending order creating a new set S. Similar sequences will be put toguether into the same cluster. The longest sequence will be the representative of the firsts cluster that will be initially empty. Then, the other sequences are compared with the represetative and if they are similar (above a threshold), they will be included into the same cluster, otherwise a new cluster will be created with the current sequence as a new representative. Every remaining sequence will be processed in the same way, either, as a representative of a new cluster if it is not similar to the others, or include into some existing cluster if it is similar to the cluter's representative (take from Liu2009).
+
+Proposed Algorithm for Reducing Folding Trayectories
+----------------------------------------------------
+	1.	Divide the big set into k subsets, with k=number of machines.
+	2.	For each subset k:
+	3.		Take the first structure as the representative, and
+	4.		calculate its number of native contacts as NCR
+	5.		For each structure in the rest of the subset:
+				calculate its number of NCs as NCO 
+				if the NCR is equal to the NCO then
+					add the structure to the current cluster
+				else:
+					create a new cluster with the current 
+					structure as its representative and break
+
+Pythonized Algorithm:
+--------------------
+def createCluster (bigset):
+	listOfCluster = []
+	while (True):
+		representative, othersSet = split (bigset)
+		NCR = numberNativeContacts (representative)
+		newCluster = [representative]
+		for structure in othersSet:
+			NCO = numberNativeContacts (structure)
+			if similar (NCO, NCR):  # similar maybe means more
+				newCluster.append (structure)
+				otherSet.remove (structure)
+			else:
+				listOfCluster.append (newCluster)
+				bigset = othersSet
+				break
+
+			representative, othersSet = split (bigset)
+
+	return listOfCluster
+
+
+			
+			
+			
+			
+		

@@ -1,0 +1,220 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language spanish
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language french
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Reducción de Trayectorias de Plegamiento de Proteínas Mediante Téc-nicas
+ de Clustering
+\end_layout
+
+\begin_layout Section*
+Resumen
+\end_layout
+
+\begin_layout Standard
+Se reporta en este artículo el uso de técnicas de clustering para la reducción
+ de las trayectorias de plegamiento de proteinas
+\end_layout
+
+\begin_layout Section
+Introducción
+\end_layout
+
+\begin_layout Subsection
+Contexto
+\end_layout
+
+\begin_layout Itemize
+El plegamiento de proteínas es un proceso que puede llevarle a la proteína
+ algunos milisegundos pero que al simularlo computacionalmente podría abarcar
+ tiempos supremamente mayores de días o meses.
+ Hasta hace algunos años las simulaciones reportadas eran de la escala de
+ algunos nanosegundos a microsegundos, sin embargo esto ha ido cambiando
+ con el surgimiento de nuevas técnicas y supercomputadoras diseñadas especialmen
+te para este tipo de simulaciones.
+ Por ejemplo, el proyecto folding@home [1], empleando una nueva técnica
+ de computación distribuida, a simulado el plegamiento de proteínas pequeñas
+ (36 residuos) en el orden de microsegundos (500 us), lo cual hasta hace
+ algunos años eran escalas de tiempo imposible de alcanzar.
+ Así mismo, la supercomputador Anton [2], diseñada especialmente para este
+ tipo de simulaciones, ha logrado simular el plegamiento de varias proteínas
+ (de 10 a 92 residuos) en el orden de los milisegundos.
+ 
+\end_layout
+
+\begin_layout Itemize
+Todas estas simulaciones producen miles o millones de conformaciones o 
+\emph on
+snapshots
+\emph default
+ que para su análisis computacional se necesita gran cantidad de tiempo
+ de máquina y recursos computacionales que muchas veces o son muy extensos
+ (horas o días) o no están disponibles fácilmente (supercomputadoras o clusters).
+ Par 
+\end_layout
+
+\begin_layout Itemize
+que pueden no estar disponibles y por lo tanto se necesita reducir esas
+ trayectorias 
+\end_layout
+
+\begin_layout Itemize
+Dependiendo del nivel de detalle con el que se quiera estudiar el plegamiento,
+ 
+\end_layout
+
+\begin_layout Itemize
+Con la 
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Note Note
+status open
+
+\begin_layout Itemize
+El procesamiento de grandes volúmenes de datos es generalmente un reto cuando
+ se trabaja en problemas de bioinformática.
+\end_layout
+
+\begin_layout Itemize
+La evolución de las técnicas ha conducido a que actualmente la disposición
+ de datos biológicos sea masiva.
+ 
+\end_layout
+
+\begin_layout Itemize
+El desafío ahora es evolucionar tanto en hardware como en software de una
+ manera tal que dichos datos se puedan procesar y obtener así información
+ con un sentido biológico
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+El supercomputador Anton es una máquina especialmente diseñada para simular
+ el plegamiento de la proteína, es decir simular los cambios en la estructura
+ tridimensional de una proteína en un periodo de un milisegundo, la cual
+ es una escala bastante superior comparado con simulaciones realizadas utilizand
+o otras técnicas y recursos.
+\end_layout
+
+\begin_layout Itemize
+Los resultados obtenidos se representan con la trayectoria de la proteína,
+ es decir, cientos o miles de secuencias de proteínas que indican la posición
+ de cada uno de sus átomos en un instante de tiempo.
+\end_layout
+
+\begin_layout Itemize
+En el caso de las proteínas el caso no es la excepción.
+ Cada vez más se tiene acceso a servidores con gran cantidad de secuencias
+ de proteínas listas para ser procesadas y analizadas.
+ Algunos centros de investigación, que cuentan con gran capacidad de cómputo,
+ colocan a disposición de la comunidad científica datos que han sido procesados
+ en sus máquinas, los cuales pueden ser accesados libremente a través de
+ una descarga o previa solicitud de los centros.
+\end_layout
+
+\begin_layout Subsection
+Necesidad
+\end_layout
+
+\begin_layout Subsection
+Trabajo
+\end_layout
+
+\begin_layout Subsection
+Bosquejo
+\end_layout
+
+\begin_layout Section
+Revisión de Literatura
+\end_layout
+
+\begin_layout Section
+Métodos
+\end_layout
+
+\begin_layout Section
+Resultados y Discusion
+\end_layout
+
+\begin_layout Section
+Conclusiones
+\end_layout
+
+\begin_layout Section*
+Referencias
+\end_layout
+
+\end_body
+\end_document

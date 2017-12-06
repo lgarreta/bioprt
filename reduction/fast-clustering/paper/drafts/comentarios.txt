@@ -1,0 +1,10 @@
+Estos son mis comentarios:
+	1. Deberías empezar a organizar el artículo desde los resultados, creo que ya tienes algunos, entonces se debería realizar la sección de resultados describiendo que es lo que obtuviste sin todavía realizar análisis, más bien enfocándose en la parte cuantitativa y estadísiticas o tablas que muestren que la reducción es efectiva. Tal vez mostrando la imagen de la estructura seleccionada en cada cluster y argumentándolo con la medida RMSD frente a las otras del grupo.
+
+	2. Una vez se tenga esta parte se avanzaría en las demás. El borrador que muestras no presenta todavía los resultados. 
+
+	3. El proceso falta describirlo mejor y dar un contexto sobre lo que se está realizando. Para esto te recomiendo hacer algo así como un diagrama de flujo de los pasos para mostrarlo gráficamente y después descibirlo.
+
+	4. Revisa el artículo que te envié y después lo discutimos.
+
+
