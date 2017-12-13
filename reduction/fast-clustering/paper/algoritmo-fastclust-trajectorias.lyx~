@@ -464,9 +464,8 @@ En secuencias de ADN y de proteínas, dos secuencias de más o menos de igual
  de longitudes completamente diferentes, por esta razón el algoritmo toma
  estos criterios.
  Sin embargo en estructuras de proteínas pertenecientes a una misma trayectoría,
- la longitud y la similaridad de la secuencia va a ser la misma para todas
- la conformaciones.
- , y la forma de comparar si dos estructuras son cercanas 
+ la longitud de la secuencia va a ser la misma para todas la conformaciones,
+ y la similaridad
 \end_layout
 
 \begin_layout Standard
