@@ -1,0 +1,751 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language spanish
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language french
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Algoritmos Rápido de Clustering para Trajectorias de Plegamiento de Proteínas
+\end_layout
+
+\begin_layout Section*
+Introducción
+\end_layout
+
+\begin_layout Description
+Contexto: Actualmente se están liberando con más frecuencia datos de simulacione
+s de plegamiento de proteínas para que la comunidad científica los analice
+ y avance en el entendimiento de este proceso.
+ Estas simulaciones alcanzan tiempos de simulación que antes no se lograban
+ debido a las limitaciones en los recursos computacionales.
+ Hace algunos años el proyecto folding@home [1] liberó varias trayectorias
+ de la simulación de la proteína Villin Headpiece la cual alcanzó el orden
+ de los microsegundos utilizando computación distribuida.
+ Más recientemente, el grupo de David Shaw liberó simulaciones de varias
+ proteínas en el orden de los milisegundos utilizando la supercomputadora
+ Anton diseñada especialmente para simular dinámica molecular [2].
+ Todas estas simulaciones se caracterizan por generar trayectorias que abarcan
+ miles o millones de conformaciones, lo cual por un lado es una gran ventaja
+ porque se tiene más detalle del proceso, pero así mismo es un problema
+ debido al tiempo y recursos computacionales necesarios para analizarlas.
+ 
+\end_layout
+
+\begin_layout Description
+Necesidad Para tratar este problema se buscan conjuntos de conformaciones
+ representativas, que generalmente utilizan métodos de agrupamiento que
+ construyen una matriz con las distancias entre cada una de las conformaciones,
+ usualmente se usa la distancia RMSD.
+ Estas agrupamientos se vuelven muy costosos en tiempo y recursos computacionale
+s cuando se trata de muchas conformaciones y por esta razón los algoritmos
+ buscan simplificar estos costos.
+ Una forma es reducir el número de átomos que comparar en las conformaciones
+ (solo carbonos alfa), otra forma es crear agrupamientos rápidos que no
+ tengan que comparar todas las conformaciones.
+ Este mismo problema pero no con estructuras de proteínas sino con secuencias
+ de ADN y proteínas se ha trabajado a través de agrupamientos rápidos basados
+ en el algoritmo de Hobohm&Sander.
+ Este algoritmo realiza un primer agrupamiento muy rápido sin comparar todas
+ las conformaciones para generar un conjunto de secuencias representativas,
+ luego realiza un segundo agrupamiento--mas detallado--con las conformaciones
+ representativas resultantes del agrupamiento rápido.
+\end_layout
+
+\begin_layout Description
+Tarea: Nosotros hemos tomado como base este algoritmo para crear un algoritmo
+ rápido de agrupamiento para el caso de las conformaciones 3D resultantes
+ de las trayectorias de simulaciones de plegamiento de proteínas que estamos
+ utilizando para reducir las trayectorias de plegamientos simuladas en la
+ supercomputadora Anton [2].
+ Las reducciones buscan realizar un cambio de escala del paso de simulación
+ mediante el agrupamiento de las conformaciones pertenecientes a un rango
+ de tiempo que determina una escala, por ejemplo llevar un paso de simulación
+ de picosegundos a nanosegundos, es decir reducir un orden de 1000.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Box Frameless
+position "t"
+hor_pos "c"
+has_inner_box 1
+inner_pos "t"
+use_parbox 0
+use_makebox 0
+width "100col%"
+special "none"
+height "1in"
+height_special "totalheight"
+status collapsed
+
+\begin_layout Subsection
+Contexto
+\end_layout
+
+\begin_layout Itemize
+El plegamiento de proteínas es un proceso que puede llevarle a la proteína
+ algunos milisegundos pero que al simularlo computacionalmente podría abarcar
+ tiempos supremamente mayores de días o meses.
+ Hasta hace algunos años las simulaciones reportadas eran de la escala de
+ algunos nanosegundos a microsegundos, sin embargo esto ha ido cambiando
+ con el surgimiento de nuevas técnicas y supercomputadoras diseñadas especialmen
+te para este tipo de simulaciones.
+ Por ejemplo, el proyecto folding@home [1], empleando una nueva técnica
+ de computación distribuida, a simulado el plegamiento de proteínas pequeñas
+ (36 residuos) en el orden de microsegundos (500 us), lo cual hasta hace
+ algunos años eran escalas de tiempo imposible de alcanzar.
+ Así mismo, la supercomputador Anton [2], diseñada especialmente para este
+ tipo de simulaciones, ha logrado simular el plegamiento de varias proteínas
+ (de 10 a 92 residuos) en el orden de los milisegundos.
+ 
+\end_layout
+
+\begin_layout Itemize
+Todas estas simulaciones producen miles o millones de conformaciones o 
+\emph on
+snapshots
+\emph default
+ que para su análisis computacional se necesita gran cantidad de tiempo
+ de máquina y recursos computacionales que muchas veces o son muy extensos
+ (horas o días) o no están disponibles fácilmente (supercomputadoras o clusters).
+ Par 
+\end_layout
+
+\begin_layout Itemize
+que pueden no estar disponibles y por lo tanto se necesita reducir esas
+ trayectorias 
+\end_layout
+
+\begin_layout Itemize
+Dependiendo del nivel de detalle con el que se quiera estudiar el plegamiento,
+ 
+\end_layout
+
+\begin_layout Itemize
+Con la 
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Note Note
+status open
+
+\begin_layout Itemize
+El procesamiento de grandes volúmenes de datos es generalmente un reto cuando
+ se trabaja en problemas de bioinformática.
+\end_layout
+
+\begin_layout Itemize
+La evolución de las técnicas ha conducido a que actualmente la disposición
+ de datos biológicos sea masiva.
+ 
+\end_layout
+
+\begin_layout Itemize
+El desafío ahora es evolucionar tanto en hardware como en software de una
+ manera tal que dichos datos se puedan procesar y obtener así información
+ con un sentido biológico
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+El supercomputador Anton es una máquina especialmente diseñada para simular
+ el plegamiento de la proteína, es decir simular los cambios en la estructura
+ tridimensional de una proteína en un periodo de un milisegundo, la cual
+ es una escala bastante superior comparado con simulaciones realizadas utilizand
+o otras técnicas y recursos.
+\end_layout
+
+\begin_layout Itemize
+Los resultados obtenidos se representan con la trayectoria de la proteína,
+ es decir, cientos o miles de secuencias de proteínas que indican la posición
+ de cada uno de sus átomos en un instante de tiempo.
+\end_layout
+
+\begin_layout Itemize
+En el caso de las proteínas el caso no es la excepción.
+ Cada vez más se tiene acceso a servidores con gran cantidad de secuencias
+ de proteínas listas para ser procesadas y analizadas.
+ Algunos centros de investigación, que cuentan con gran capacidad de cómputo,
+ colocan a disposición de la comunidad científica datos que han sido procesados
+ en sus máquinas, los cuales pueden ser accesados libremente a través de
+ una descarga o previa solicitud de los centros.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Marco Teórico
+\end_layout
+
+\begin_layout Standard
+En esta sección describiremos los elementos básicos que se manejan en este
+ trabajo, principalmente hablaremos de plegamiento de proteína, simulaciones
+ de plegamiento de proteínas, trayectorias de plegamiento y métodos de reducción
+ de datos biológicos.
+\end_layout
+
+\begin_layout Subsection
+Plegamiento de Proteínas
+\end_layout
+
+\begin_layout Standard
+Revisar sección 2.2  Tesis LG
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Garreta2015"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Simulaciones de Plegamiento
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+An MD computation simulates the motion of a collection of atoms (the chemical
+ system) over a period of time accord- ing to the laws of classical physics.1
+ Time is broken into a series of discrete time steps, each representing
+ a few fem- toseconds of simulated time.
+ A time step has two major phases.
+ Force calculation computes the force on each par- ticle due to other particles
+ in the system.
+ Integration uses the net force on each particle to update that particle’s
+ posi- tion and velocity [Shaw08]
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Revisar secciones 2.7, especialmente la 2.7.1.
+ de Tesis LG 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Garreta2015"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Simulaciones Largas de Plegamiento
+\end_layout
+
+\begin_layout Standard
+Las simulaciones del plegamiento de proteínas son complejas y demandan gran
+ cantidad de tiempo y recursos computacionales.
+ Debido a estas limitaciones tecnológicas, las simulaciones del plegamiento
+ de proteínas hasta hace unos años se realizaban para proteínas pequeñas
+ y los tiempos simulados eran muy cortos, en el orden de los microsegundos
+ mientras que una proteína se pliega en el orden de los milisegundos 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+cite{HuardWood06}
+\end_layout
+
+\end_inset
+
+.
+ Sin embargo, en los últimos años los avances en el hardware han logrado
+ algunos avances de tal manera que se empiezan a mostrar resultados de simulacio
+nes más largas y de proteínas más grandes.
+ Dos ejemplos de estos avances son los proyectos de folding@home y de la
+ supercomputadora Anton.
+ El proyecto foldin@home logró realizar hace algunos años una de las primeras
+ simulaciones largas utilizando computación distribuida.
+ Una de sus simulaciones alcanzó el orden de los microsegundos para plegar
+ completamente una proteína pequeña, la Villin Headpiece de 36 residuos
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "LougherMarsder12"
+
+\end_inset
+
+.
+ La supercomupatadora Anton es un proyecto más reciente (2010) que usa computaci
+ón paralela y hardware especializado para simular dinámica molecular.
+ Con está máquina se ha logrado plegar completamente varias proteínas medianas
+ (10-80 residuos), alcanzando tiempos de simulación del orden de los milisegundo
+s 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Shaw08"
+
+\end_inset
+
+.
+ En ambos proyectos los resultados de las trayectorias están disponibles
+ para que la comunidad científica los descargue y los analice para avanzar
+ en el entendimiento del plegamiento de las proteínas.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+Otras fuentes
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Wikipedia1963"
+
+\end_inset
+
+, 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "LougherMarsder12"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+ 
+\end_layout
+
+\begin_layout Section
+Antecedentes 
+\end_layout
+
+\begin_layout Standard
+Describimos a continuación el algoritmo rápidos de agrupamiento propuesto
+ por Hobhon & Sander, mostrando sus principales características, después
+ describimos como algunas herramientas han implementado este algoritmo para
+ agrupar secuencias de ADN o de Proteínas, y finalmente planteamos los elementos
+ que tomamos de este algoritmo y de sus implementaciones para crear nuestro
+ algoritmo para agrupar conformaciones de proteínas de trayectorias de simulació
+n 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Shaw08"
+
+\end_inset
+
+
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Shaw08"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Algoritmo de Hobhon y Sander
+\end_layout
+
+\begin_layout Standard
+Este algoritmo se creó inicialmente para agrupar de forma rápida secuencias
+ de proteínas 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+cite{Hobohm92}
+\end_layout
+
+\end_inset
+
+, y busca las secuencias más representativos a través de dos actividades:
+ un ordenamiento y selección rápida.
+ En la primera actividad, el algoritmo ordena las secuencias por longitud
+ en orden descendiente, luego toma la primera secuencia (la más larga) y
+ la toma como representativa del primer grupo.
+ En la segunda actividad, la selección viene dada comparando el resto de
+ secuencias con la representativa e incorporándola al grupo si son cercanas
+ (e.g.
+ si son similares a nivel de secuencias).
+ Si la secuencia que se está comparando no es muy cercana, entonces está
+ pasa a ser la representativa de un nuevo grupo y se hace lo mismo con el
+ resto de secuencias hasta terminar.
+ 
+\end_layout
+
+\begin_layout Standard
+Los aspectos determinantes del éxito del algoritmo son la relación de orden
+ que se establezca al inicio y las propiedades que se tomen para comparar
+ las secuencias.
+ En secuencias de ADN y de proteínas estos aspectos funcionan bien ya que
+ dos secuencias de más o menos de igual longitud tienen mayor probabilidad
+ de ser similares que dos secuencias de longitudes completamente diferentes.
+ Sin embargo en estructuras tridimensionales de proteínas que pertenecen
+ a una misma trayectoria, la longitud y la similaridad de la secuencia va
+ a ser la misma para todas la conformaciones, lo que implica redefinir estos
+ aspectos en términos de las características de las estructuras 3D de proteínas
+ de una misma trayectoria, como vamos a describir más adelante cuando mostremos
+ nuestra implementación del algoritmo.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status collapsed
+
+\begin_layout Description
+Liu09: Hobohm and Sander’s algorithm sorts all sequences by length in descending
+ order to generate an ordered sequen- ce set S.
+ Then similar sequences will be put together into the same cluster.
+ The longest sequence is added into the first cluster (initially empty),
+ which is also the represen- tative of the cluster, and then all the other
+ sequences are compared with the representative.
+ If the similarity be- tween a sequence and the representative is above
+ a thre- shold then it will be included into the same cluster as the representat
+ive’s, otherwise a new cluster will be created with it as the representative.
+ Every remaining sequence will be processed in the same way, either as the
+ repre- sentative of a new cluster if the similarity between it and any
+ representative is below the threshold, or included into some existing cluster
+ if it is similar to the cluster’s representative.
+ 2.
+\end_layout
+
+\begin_layout Description
+Weizhong02: According to this algorithm, a final clustered database is composed
+ of representative sequences with pairwise similarities below a specified
+ threshold.
+ So a sequence having an identity greater than the threshold to a chosen
+ representative is considered redundant and is removed from the database.
+ Sequences are first sorted in order of decreasing length, and the longest
+ sequence is selected as the first representative.
+ Each remaining sequence is then compared to all the existing representatives,
+ and if it is not redundant to all old representatives then it is added
+ as a new representative.
+ The sequence identity is computed as the number of identical residues in
+ the alignment divided by the length of the shorter sequence.
+ This algorithm guarantees that all representatives are compared and that
+ all deleted sequences are compared to their corresponding representatives.
+ It doesn’t care whether the non-representative sequences in the same cluster
+ are similar or not.
+ For example, two short se- quences can be aligned at different regions
+ of a long representative sequence.
+ Short-word
+\end_layout
+
+\begin_layout Description
+Hobohm92: The first algorithm focuses on optimizing a par- ticular property
+ of the selected proteins and works by successive selection of proteins
+ from an ordered list and exclusion of all neighbors of each selected protein.
+ The other algorithm aims at maximizing the size of the selected set and
+ works by successive thinning out of clusters of similar proteins.
+ Both algorithms are generally applicable to other data bases in which criteria
+ of similarity can be defined and relate to problems in graph theory
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Implementaciones del Algoritmo de Hobhon y Sander
+\end_layout
+
+\begin_layout Standard
+Dos de las implementaciones más usadas para agrupamiento rápido de secuencias
+ son los programas CD-HIT y UCLUST.
+ El programa CD-HIT 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+cite{Weizhong2002}
+\end_layout
+
+\end_inset
+
+ realiza un ordenamiento por longitud de la secuencia como lo plantea el
+ algoritmo de Hobhon, y para la selección utiliza un filtro de palabras
+ cortas para comparar si dos secuencias son similares--evitando el alineamiento
+ de las mismas--y así asignarlas a un mismo grupo o crear uno nuevo.
+ En el caso de secuencias de proteínas el programa usa por defecto una palabra
+ de 10 aminoácidos o 
+\emph on
+decapeptido
+\emph default
+.
+ En cambio el programa UCLUST 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+cite{Edgar2010}
+\end_layout
+
+\end_inset
+
+utiliza para comparar las secuencias una función creada por los mismos autores
+ que la llaman como USEARCH y que calcula la similitud entre las secuencias
+ a partir de un alineamiento global.
+\end_layout
+
+\begin_layout Standard
+En el caso de estructuras de proteínas provenientes de trayectorias, la
+ selección se puede realizar usando la distancia media cuadrática mínima
+ o RMSD con umbrales muy altos, ya que dos conformaciones que ocurran muy
+ cerca en el tiempo (eg.
+ tn y tn+1) van a presentar cambios mínimos en su configuración (un leve
+ desplazamiento de los átomos), y por lo tanto deberían estar en un mismo
+ grupo.
+ Sin embargo, si el umbral de RMSD se sobrepasa, esto indica que las conformacio
+nes tiene diferencias apreciables y por lo tanto se debería iniciar otro
+ grupo.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
+\begin_layout Description
+Liu09: It uses short word filtering to deter- mine the similarity between
+ two sequences rather than performing an actual sequence alignment.
+ However, the results generated by short word filtering are not accurate
+ to some degree.
+ The lowest threshold of CD-HIT is around 40% and it is not suitable for
+ removing redun- dancy on lower threshold.
+ PISCES [7] is a public server for culling sets of protein sequences from
+ the Protein Data Bank.
+ It determines sequence similarity by PSI- BLAST [8] alignments which are
+ more accurate, and it also uses a structural quality criterion to cull
+ sequences from a sequence database.
+\end_layout
+
+\begin_layout Description
+Liu09: FastCluster, introduced in this paper, uses BLAST [9] to determine
+ sequence similarity, which is a general se- quence alignment tool and can
+ provide better sequence similarity than word filtering.
+ FastCluster makes im- provements to Hobohm and Sander’s algorithm and can
+ get a larger non-redundant protein dataset, which means more protein families
+ can be clustered.
+\end_layout
+
+\begin_layout Description
+Li12a: Uclust [39] follows CD-HIT’s greedy incremental approaches, but it
+ uses a heuristics called Usearch for fast sequence comparison.
+ It also gains speed by com- paring a few top sequences instead of the full
+ data- base.
+ Uclust can run on DNA, protein and rRNA sequences.
+ Currently, its 32-bit pre-compiled bin- aries are freely available from
+ http://www.drive5 .com/usearch/.
+ 
+\end_layout
+
+\begin_layout Description
+Li12a: DNACLUST [40] also follows greedy incremental approach; it uses a
+ suffix array to index the input data set.
+ Unlike CD-HIT and Uclust, which can process both proteins and DNAs, DNACLUST
+ only works on DNA se- quences, and it is suitable for clustering highly
+ similar DNAs, especially for rRNA tags.
+ It is available as open source program at http://dnaclust.source forge.net/.
+ SEED [41] only works with Illumina reads and only identifies up to three
+ mismatches and three overhanging bases.
+ It uses an open hashing technique and a special class of spaced seeds,
+ called block spaced seed.
+ SEED is also an open source soft- ware available at http://manuals.bioinformatic
+s.ucr .edu/home/seed.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Datos y Métodos
+\end_layout
+
+\begin_layout Standard
+Aquí planteamos nuestro algoritmo de agrupamiento rápidos de estructuras
+ de proteínas y después describimos las características de la trayectoria
+ que utilizamos para realizar la reducción.
+\end_layout
+
+\begin_layout Subsection
+Trayectorias de Plegamiento de Proteínas generada por Anton
+\end_layout
+
+\begin_layout Standard
+Estas simulaciones fueron realizadas por la supercomputadora Antom especialmente
+ diseñada para resolver problemas de Dinámica Molecular
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+cite{Shaw2008}
+\end_layout
+
+\end_inset
+
+, que es el método más utilizado para simular el plegamiento de proteínas.
+ Las trayectorias puestas a disposición corresponden a las simulaciones
+ del plegamiento completo en solvente explicito de 12 proteínas de 10 a
+ 92 residuos 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+cite {Shaw2010}
+\end_layout
+
+\end_inset
+
+.
+ Por cada una de las proteínas se ejecutaron hasta cuatro simulaciones de
+ 100 microsegundos hasta 1 milisegundo de longitud.
+\end_layout
+
+\begin_layout Subsection
+Algoritmo Rápido de Agrupamiento de Estructuras de Proteínas
+\end_layout
+
+\begin_layout Section
+Resultados y Discusión
+\end_layout
+
+\begin_layout Standard
+Utilizando los datos de la trayectoria descrita en la sección 2, aquí mostramos
+ como estas escala escala al realizar agrupamientos de bloques de 1000,
+ es decir de picosegundos a nanosegundo y después a milisegundos.
+ A continuación mostramos los agrupamientos utilizando diferentes métodos
+ para de tres bloques de 1000 conformaciones de la trayectoria: el primer
+ bloque corresponde a las primeras 1000 conformaciones; el segundo bloque
+ corresponde a las 1000 conformaciones de la mitad; y el tercer bloque correspon
+de a las 1000 ultimas conformaciones.
+\end_layout
+
+\begin_layout Subsection
+Escalamiento de la trayectoría
+\end_layout
+
+\begin_layout Subsection
+Agrupamiento k-means
+\end_layout
+
+\begin_layout Subsection
+Agrupamiento jerárquico
+\end_layout
+
+\begin_layout Subsection
+Agrupamiento rápido
+\end_layout
+
+\begin_layout Section
+Conclusiones
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+bibfiles "reduccion-trayectorias-refs"
+options "plain"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

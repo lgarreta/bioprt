@@ -6,7 +6,7 @@ size of the bin. The bins are put in an output directory\n\
 USAGE: createBins.py <inputDir> <outputDir>\n"
 
 import os, sys, math
-SIZEBIN  = 10   # Number of files for each bin
+SIZEBIN  = 100   # Number of files for each bin
 SIZEFILL = 6      # Number of zeros to fill bin names
 
 #--------------------------------------------------------

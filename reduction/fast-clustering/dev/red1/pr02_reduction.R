@@ -18,7 +18,7 @@ library (cluster)
 options (width=300)
 
 THRESHOLD = 1.3
-NCORES    = 1
+NCORES= 1
 #----------------------------------------------------------
 # Main function
 #----------------------------------------------------------
@@ -44,7 +44,7 @@ main <- function () {
 		createDir (clusDir)
 
 		# Fast clustering for bin, writes representatives to clusDir
-		partialClustering (binPath, clusDir)
+		partialClustering (binPath, clusDir, THRESHOLD)
 
 		# Get Medoid from clustir and write to output dir
 		fullClustering (clusDir, outputDir)
@@ -57,27 +57,31 @@ main <- function () {
 # Write the links to the representatives in the output dir
 # Return a list with the representative as the first pdb in the group
 #----------------------------------------------------------
-partialClustering <- function (inputDir, outputDir) {
+partialClustering <- function (inputDir, outputDir, threshold) {
 	cat (">>> Partial clustering...")
 	# Get proteins from input dir
 	inputProteinsLst   = list.files (inputDir, pattern=".pdb", full.names=T)
 
 	# Assign the first protein as first group
-	lstGroups = list (inputProteinsLst[[1]])
+	firstProtein = inputProteinsLst[[1]]
+	lstGroups = list (firstProtein)
+	cmm = sprintf ("ln -s %s/%s %s/%s", getwd(), firstProtein, outputDir, basename(firstProtein))
+	system (cmm)
 
 	# Assign the other proteins to groups
 	for (protein in inputProteinsLst[2:length(inputProteinsLst)]) {
-		groupNumber = getGroupNumberByRmsd (protein, lstGroups, THRESHOLD)
+		groupNumber = getGroupNumberByRmsd (protein, lstGroups, threshold)
+		cat (">>> ...the group is ", groupNumber, "\n")
 
-		if (groupNumber != -1) {
-			group = lstGroups [[groupNumber]]
-			lstGroups [[groupNumber]] = append (lstGroups[[groupNumber]],protein)
-		} else {
+		if (groupNumber == -1) {
 			group = list (protein)
 			cmm = sprintf ("ln -s %s/%s %s/%s", getwd(), protein, outputDir, basename(protein))
 			#print (cmm)
 			system (cmm)
 			lstGroups = append (lstGroups, list (group))
+		} else {
+			group = lstGroups [[groupNumber]]
+			lstGroups [[groupNumber]] = append (lstGroups[[groupNumber]],protein)
 		}
 	} 
 	return (lstGroups)
@@ -89,7 +93,7 @@ partialClustering <- function (inputDir, outputDir) {
 fullClustering <- function (inputDir, outputDir) {
 	cat (">>> fullClustering...")
 	pdbNames = list.files (inputDir, full.names=T)
-	if (length (pdbNames) == 1)
+	if (length (pdbNames) < 2)
 		medoid = 1
 	else {
 		#rmsdDistanceMatrix   <<- getRmsdDistanceMatrixWithAlginments (inputDir)
@@ -110,6 +114,7 @@ fullClustering <- function (inputDir, outputDir) {
 # calculates the protein closest group 
 #----------------------------------------------------------
 getGroupNumberByRmsd <- function (protein, lstGroups, threshold) {		
+	cat (">>> Getting cluster number...", threshold)
 	counter = 1
 	for (group in lstGroups) {
 		localProtein = group [[1]]
@@ -126,6 +131,7 @@ getGroupNumberByRmsd <- function (protein, lstGroups, threshold) {
 calculateRMSD <- function (proteinTarget, proteinReference) {
 	target <- read.pdb2 (proteinTarget, rm.alt=FALSE, verbose=FALSE)
 	reference <- read.pdb2 (proteinReference, rm.alt=FALSE, verbose=FALSE)
+	return (sample (1:3, 1))
 	value = rmsd (target$xyz, reference$xyz, fit=TRUE)
 	return (value)
 }
@@ -222,8 +228,8 @@ getRmsdDistanceMatrix <- function (inputDir) {
 #--------------------------------------------------------------
 getRmsdDistanceMatrixWithAlginments <- function (inputDir) {
 	pdbNames     = list.files (inputDir, full.names=T)
-	pdbObjects     <<- pdbaln (pdbNames, NCORES)
-	rmsdDistances  <<- rmsd (pdbObjects, fit=T)
+	pdbObjects     <- pdbaln (pdbNames, NCORES)
+	rmsdDistances  <- rmsd (pdbObjects, fit=T)
 }
 
 #--------------------------------------------------------------

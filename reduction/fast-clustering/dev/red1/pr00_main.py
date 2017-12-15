@@ -11,7 +11,7 @@ USAGE="\
 Reduce a trayectory using a fast clustering\n\
 USAGE:  pr00_main.py <inputDir>\n"
 
-THRESHOLD = 1.3
+THRESHOLD = 2.0
 NCORES    = 1
 def main (args):
 	if len (args) < 2:
