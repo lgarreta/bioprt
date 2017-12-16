@@ -24,7 +24,7 @@ NCORES= 1
 #----------------------------------------------------------
 main <- function () {
 	args <- commandArgs (TRUE)
-	#args = c("outbins", "res", "1.3", "1")
+	args = c("outbins", "outrepr", "2.0", "1")
 	if (length (args) < 4){
 		cat (USAGE)
 		quit (status=1)
@@ -41,13 +41,14 @@ main <- function () {
 		cat ("\n>>> Reducing ", binPath )
 		# Create the output dir for representatives
 		clusDir = (paste (getwd(), outputDir, basename (binPath), sep="/"))
-		createDir (clusDir)
+		createDir (clusDir)		
 
+		pdbsBin <- getPDBFiles (binPath)
 		# Fast clustering for bin, writes representatives to clusDir
-		partialClustering (binPath, clusDir, THRESHOLD)
+		pdbNames = partialClustering (binPath, clusDir, THRESHOLD, pdbsBin)
 
 		# Get Medoid from clustir and write to output dir
-		fullClustering (clusDir, outputDir)
+		fullClustering (clusDir, outputDir, pdbNames, pdbsBin)
 	}
 	cat ("\n")
 }
@@ -57,26 +58,27 @@ main <- function () {
 # Write the links to the representatives in the output dir
 # Return a list with the representative as the first pdb in the group
 #----------------------------------------------------------
-partialClustering <- function (inputDir, outputDir, threshold) {
+partialClustering <- function (inputDir, outputDir, threshold, pdbsBin) {
 	cat (">>> Partial clustering...")
 	# Get proteins from input dir
-	inputProteinsLst   = list.files (inputDir, pattern=".pdb", full.names=T)
+	inputProteinsLst   = paste (inputDir, names (pdbsBin), sep="/")
 
 	# Assign the first protein as first group
-	firstProtein = inputProteinsLst[[1]]
+	firstProtein = basename (inputProteinsLst[[1]])
 	lstGroups = list (firstProtein)
-	cmm = sprintf ("ln -s %s/%s %s/%s", getwd(), firstProtein, outputDir, basename(firstProtein))
+	lstRepresentatives = c(firstProtein)
+
+	cmm = sprintf ("ln -s %s/%s/%s %s/%s", getwd(), inputDir, firstProtein, outputDir, basename(firstProtein))
 	system (cmm)
 
 	# Assign the other proteins to groups
-	for (protein in inputProteinsLst[2:length(inputProteinsLst)]) {
-		groupNumber = getGroupNumberByRmsd (protein, lstGroups, threshold)
-		cat (">>> ...the group is ", groupNumber, "\n")
+	for (protein in basename (inputProteinsLst[2:length(inputProteinsLst)])) {
+		groupNumber = getGroupNumberByRmsd (protein, lstGroups, threshold, pdbsBin)
 
 		if (groupNumber == -1) {
 			group = list (protein)
-			cmm = sprintf ("ln -s %s/%s %s/%s", getwd(), protein, outputDir, basename(protein))
-			#print (cmm)
+			cmm = sprintf ("ln -s %s/%s/%s %s/%s", getwd(), inputDir, protein, outputDir, basename(protein))
+			lstRepresentatives = append (lstRepresentatives, basename (protein))
 			system (cmm)
 			lstGroups = append (lstGroups, list (group))
 		} else {
@@ -84,27 +86,26 @@ partialClustering <- function (inputDir, outputDir, threshold) {
 			lstGroups [[groupNumber]] = append (lstGroups[[groupNumber]],protein)
 		}
 	} 
-	return (lstGroups)
+	return (lstRepresentatives)
 }	
 
 #----------------------------------------------------------
 # Clustering around medoids. Return one medoid for all inputs
 #----------------------------------------------------------
-fullClustering <- function (inputDir, outputDir) {
-	cat (">>> fullClustering...")
-	pdbNames = list.files (inputDir, full.names=T)
+fullClustering <- function (inputDir, outputDir, pdbNames, pdbsBin) {
+	cat ("\n>>> fullClustering...", inputDir )
 	if (length (pdbNames) < 2)
 		medoid = 1
 	else {
 		#rmsdDistanceMatrix   <<- getRmsdDistanceMatrixWithAlginments (inputDir)
-		rmsdDistanceMatrix   <<- getRmsdDistanceMatrix (inputDir)
+		rmsdDistanceMatrix   <<- getRmsdDistanceMatrix (pdbNames, pdbsBin)
 
 		pamPDBs <- pam (rmsdDistanceMatrix, 1, diss=T)
 		medoid = pamPDBs$medoid
 	}
 
 	medoidPath <- pdbNames [medoid]
-	cmm = sprintf ("ln -s %s %s/%s", medoidPath, outputDir, basename (medoidPath))   
+	cmm = sprintf ("ln -s %s/%s %s/%s", inputDir, medoidPath, outputDir, medoidPath)   
 	system (cmm)
 
 	return (medoidPath)
@@ -113,30 +114,112 @@ fullClustering <- function (inputDir, outputDir) {
 #----------------------------------------------------------
 # calculates the protein closest group 
 #----------------------------------------------------------
-getGroupNumberByRmsd <- function (protein, lstGroups, threshold) {		
-	cat (">>> Getting cluster number...", threshold)
+getGroupNumberByRmsd <- function (protein, lstGroups, threshold, pdbsBin) {
+	groupNumber = -1
 	counter = 1
 	for (group in lstGroups) {
-		localProtein = group [[1]]
-		r = calculateRMSD (protein, localProtein)
-		if (r < threshold)
-			return (counter)
+		localProtein       = group [[1]]
+		localPdbObject     = pdbsBin [[basename (localProtein)]]
+		referencePdbObject = pdbsBin [[basename (protein)]]
+
+		rmsdValue = rmsd (localPdbObject$xyz, referencePdbObject$xyz, fit=T)
+
+		if (rmsdValue < threshold) {
+			groupNumber = counter
+			break
+		}
 		counter = counter + 1	
 	}	
-	return (-1)
+	#cat ("\nRMSD: ", rmsdValue, ">>>",  basename (protein), ", ", basename (localProtein), " GROUP: ", groupNumber)
+	return (groupNumber)
 }
 #----------------------------------------------------------
 # calculate the rmsd of two proteins.
 #----------------------------------------------------------
-calculateRMSD <- function (proteinTarget, proteinReference) {
+calculateRMSD <- function (proteinTarget, proteinReference, pdbsBin) {
 	target <- read.pdb2 (proteinTarget, rm.alt=FALSE, verbose=FALSE)
 	reference <- read.pdb2 (proteinReference, rm.alt=FALSE, verbose=FALSE)
-	return (sample (1:3, 1))
 	value = rmsd (target$xyz, reference$xyz, fit=TRUE)
 	return (value)
 }
 
+#--------------------------------------------------------------
+# Calculate pairwise RMSDs
+#--------------------------------------------------------------
+getRmsdDistanceMatrix <- function (pdbNames, pdbsBin) {
+	#pdbObjects = getPDBFiles (inputDir)
+
+	pdbObjects = pdbsBin [pdbNames]
+	pdb <- pdbObjects [[1]]
+	CAs <- atom.select (pdb, elety="CA", verbose=FALSE)
+	firstPdb <- pdb$xyz[CAs$xyz]
+
+	n <- length (pdbObjects)
+
+	# Calculate matrix of coordinates xyz
+	xyzMatrix <- matrix (firstPdb,nrow=1)
+	for (k in 2:n) {
+		pdb =  pdbObjects [[k]] 
+		CAs = atom.select (pdb, elety="CA", verbose=FALSE)
+		pdb = pdb$xyz[CAs$xyz]
+		xyzMatrix = rbind (xyzMatrix, n1=pdb)
+	}
+	rownames (xyzMatrix) <- names (pdbObjects)
+	mat <<-xyzMatrix
+
+	# Calculate RMSDs
+	xyz <- fit.xyz (fixed = firstPdb, mobile = xyzMatrix, ncore=1)
+
+	rmsdDistances <- as.dist (rmsd (xyz, ncore=1), diag=T)
+
+	return (rmsdDistances)
+}
+
+#--------------------------------------------------------------
+# Load pdb files to pdb objects, makes firstly an alignment
+# and return a distance matrix
+#--------------------------------------------------------------
+getRmsdDistanceMatrixWithAlginments <- function (inputDir) {
+	pdbNames     = list.files (inputDir, full.names=T)
+	pdbObjects     <- pdbaln (pdbNames, NCORES)
+	rmsdDistances  <- rmsd (pdbObjects, fit=T)
+}
+
+#--------------------------------------------------------------
+# Load pdb files to pdb objects 
+#--------------------------------------------------------------
+getPDBFiles <- function (inputDir) {
+	cat ("\n>>> Loading PDB files to objects from: ", inputDir, "\n")
+	pdbNames <- list.files (inputDir, full.names=T)
+
+	# Load PDB Objects
+	pdbObjects <- mclapply (X=pdbNames, FUN=read.pdb2, mc.cores=NCORES)
+	names (pdbObjects) <- basename (pdbNames)
+	return (pdbObjects)
+}
 #----------------------------------------------------------
+# Create dir, if it exists the it is renamed old-XXX
+#----------------------------------------------------------
+createDir <- function (newDir) {
+	checkOldDir <- function (newDir) {
+		name  = basename (newDir)
+		path  = dirname  (newDir)
+		if (dir.exists (newDir) == T) {
+			oldDir = sprintf ("%s/old-%s", path, name)
+			if (dir.exists (oldDir) == T) {
+				checkOldDir (oldDir)
+			}
+
+			file.rename (newDir, oldDir)
+		}
+	}
+
+	checkOldDir (newDir)
+	system (sprintf ("mkdir %s", newDir))
+}
+
+#----------------------------------------------------------
+# NOT USED
 # Write the groups' representatives to the ouput dir
 #----------------------------------------------------------
 writeRepresentatives <- function (lstGroups, outputDir) {
@@ -148,6 +231,7 @@ writeRepresentatives <- function (lstGroups, outputDir) {
 	}
 }
 #----------------------------------------------------------
+# NOT USED
 # Write the groups formatted as lines of text
 #----------------------------------------------------------
 writeGroups <- function (lstGroups, outputDir=NULL) {
@@ -171,77 +255,8 @@ writeGroups <- function (lstGroups, outputDir=NULL) {
   cat (">>> End writing \n")
 }
 
-#----------------------------------------------------------
-# Create dir, if it exists the it is renamed old-XXX
-#----------------------------------------------------------
-createDir <- function (newDir) {
-	checkOldDir <- function (newDir) {
-		name  = basename (newDir)
-		path  = dirname  (newDir)
-		if (dir.exists (newDir) == T) {
-			oldDir = sprintf ("%s/old-%s", path, name)
-			if (dir.exists (oldDir) == T) {
-				checkOldDir (oldDir)
-			}
 
-			file.rename (newDir, oldDir)
-		}
-	}
 
-	checkOldDir (newDir)
-	system (sprintf ("mkdir %s", newDir))
-}
-
-#--------------------------------------------------------------
-# Calculate pairwise RMSDs
-#--------------------------------------------------------------
-getRmsdDistanceMatrix <- function (inputDir) {
-	pdbObjects = getPDBFiles (inputDir)
-
-	pdb <<- pdbObjects [[1]]
-	CAs <- atom.select (pdb, elety="CA", verbose=FALSE)
-	firstPdb <<- pdb$xyz[CAs$xyz]
-
-	n <<- length (pdbObjects)
-
-	# Calculate matrix of coordinates xyz
-	xyzMatrix <- matrix (firstPdb,nrow=1)
-	for (pdb in pdbObjects [2:n]) {
-		CAs = atom.select (pdb, elety="CA", verbose=FALSE)
-		pdb = pdb$xyz[CAs$xyz]
-		xyzMatrix = rbind (xyzMatrix, n1=pdb)
-	}
-	rownames (xyzMatrix) <- names (pdbObjects)
-	mat <<-xyzMatrix
-
-	# Calculate RMSDs
-	xyz <- fit.xyz (fixed = firstPdb, mobile = xyzMatrix, ncore=1)
-
-	rmsdDistances <<- as.dist (rmsd (xyz, ncore=1), diag=T)
-
-	return (rmsdDistances)
-}
-
-#--------------------------------------------------------------
-# Load pdb files to pdb objects, makes firstly an alignment
-# and return a distance matrix
-#--------------------------------------------------------------
-getRmsdDistanceMatrixWithAlginments <- function (inputDir) {
-	pdbNames     = list.files (inputDir, full.names=T)
-	pdbObjects     <- pdbaln (pdbNames, NCORES)
-	rmsdDistances  <- rmsd (pdbObjects, fit=T)
-}
-
-#--------------------------------------------------------------
-# Load pdb files to pdb objects 
-#--------------------------------------------------------------
-getPDBFiles <- function (inputDir) {
-	pdbNames     = list.files (inputDir, full.names=T)
-
-	# Load PDB Objects
-	pdbObjects <<- mclapply (X=pdbNames, FUN=read.pdb2, mc.cores=NCORES)
-	return (pdbObjects)
-}
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
