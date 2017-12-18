@@ -36,7 +36,7 @@ def createBins (inputDir, outputDir, binSize, binFill):
 
 	for n,lst in enumerate (binList):
 		print ">>> Creating bin %s..." % n
-		binDirname = "%s/%s%s" % (outputDir, "bin", str (n).zfill (binFill))
+		binDirname = "%s/%s%s" % (outputDir, "bin", str (n+1).zfill (binFill))
 		os.mkdir (binDirname)
 		for filename in lst:
 			sourceFilename  = "%s/%s" % (inputDir, filename)
