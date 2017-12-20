@@ -11,8 +11,9 @@ USAGE="\
 Reduce a trayectory using a fast clustering\n\
 USAGE:  pr00_main.py <inputDir>\n"
 
-THRESHOLD = 2.0
-NCORES    = 1
+RMSDTHRESHOLD = 1.5
+NCORES	= 4
+
 def main (args):
 	if len (args) < 2:
 		print USAGE
@@ -22,13 +23,21 @@ def main (args):
 	outputDirBins = "outbins"
 	outputDirRepr = "outrepr"
 
+	print "Parameters: "
+	print "\t Input dir: ", inputDir
+	print "\t Output dir bins: ", outputDirBins
+	print "\t Output dir representatives: ", outputDirRepr
+	print "\t RMSD THRESHOLD: ", RMSDTHRESHOLD
+	print "\t NUM CORES : ", NCORES
+	print "\n"
+
 	# Split full trajectory in bins (blocks of 1000 pdbs)
 	cmm ="pr01_createBins.py %s %s" % (inputDir, outputDirBins)
 	os.system (cmm)
 
 	# Get Representatives for each bin
 	createDir (outputDirRepr)
-	cmm = "pr02_reduction.R %s %s %s %s" % (outputDirBins, outputDirRepr, THRESHOLD, NCORES)
+	cmm = "pr02_reduction.R %s %s %s %s" % (outputDirBins, outputDirRepr, RMSDTHRESHOLD, NCORES)
 	os.system (cmm)
 
 #------------------------------------------------------------------

@@ -34,9 +34,10 @@ def createBins (inputDir, outputDir, binSize, binFill):
 	inputFiles  = getSortedFilesDir (inputDir, ".pdb")
 	binList = splitBins (inputFiles, binSize)
 
-	for n,lst in enumerate (binList):
-		print ">>> Creating bin %s..." % n
-		binDirname = "%s/%s%s" % (outputDir, "bin", str (n+1).zfill (binFill))
+	for k,lst in enumerate (binList):
+		binNumber = k+1
+		print ">>> Creating bin %s..." % binNumber
+		binDirname = "%s/%s%s" % (outputDir, "bin", str (binNumber).zfill (binFill))
 		os.mkdir (binDirname)
 		for filename in lst:
 			sourceFilename  = "%s/%s" % (inputDir, filename)
