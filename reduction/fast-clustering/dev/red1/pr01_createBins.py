@@ -57,7 +57,7 @@ def splitBins (inputFiles, binSize):
 	for k in range (nBins):
 		start = k*binSize
 		end   = start + binSize 
-		if k < binSize-1:
+		if k < nBins-1:
 			binList.append (inputFiles [start:end])
 		else:
 			binList.append (inputFiles [start:])
