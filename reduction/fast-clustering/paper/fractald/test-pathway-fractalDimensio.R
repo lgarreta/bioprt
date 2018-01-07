@@ -44,7 +44,7 @@ main <- function (args) {
 
 	cat ("\nFD: ", f$fd)
 
-	#print (rmsdDistances)
+	print (rmsdDistances)
 }
 #--------------------------------------------------------------
 # Calculate the RMSD between two protein structures

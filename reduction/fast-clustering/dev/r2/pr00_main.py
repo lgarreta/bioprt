@@ -1,27 +1,37 @@
 #!/usr/bin/python
 import os, sys
 
-#------------------------------------------------------------------
-# Given a trayectory it uses a fast clustering algorith to
-# reduce the trayectory to only the main representatives.
-# INPUT:  An input directory where the trayectory files are located
-# OUTPUT: An output directory with the representative files
-#------------------------------------------------------------------
-USAGE="\
-Reduce a trayectory using a fast clustering\n\
-USAGE:  pr00_main.py <inputDir>\n"
+"""
+ Given a trayectory it uses a fast clustering algorith to
+ reduce the trayectory to only the main representatives.
+ INPUT:  
+   <inputDir>  An input directory with the trayectory files 
+   <outputDir> An output directory with the results (representative files)
+"""
+USAGE  = "\nReduces a trayectory using a fast clustering"
+USAGE += "\nUSAGE   : pr00_main.py <inputDir> <outputDir> <RMSD> <SizeBin> <nCores>"
+USAGE += "\nExample : pr00_main.py in1000 out1000 1.5 100 4"
 
-RMSDTHRESHOLD = 1.5
-NCORES	= 4
+# Constant values
+RMSDTHRESHOLD = 1.5   # Threshold for RMSD comparison between structures"
+NCORES	      = 4     # Number of cores for multiprocessing
+SIZEBIN       = 1000  # Number of files for each bin
 
 def main (args):
-	if len (args) < 2:
+	if len (args) < 6:
 		print USAGE
 		sys.exit (1)
 
-	inputDir = args [1]
-	outputDirBins = "outbins"
-	outputDirRepr = "outrepr"
+	inputDir      = args [1]
+	outputDir     = args [2]
+	RMSDTHRESHOLD = float (args [3])
+	SIZEBIN       = int (args [4])
+	NCORES        = int (args [5])
+
+	outputDirBins = "%s/outbins" % outputDir
+	outputDirRepr = "%s/outrepr" % outputDir
+
+	createDir (outputDir)
 
 	print "Parameters: "
 	print "\t Input dir: ", inputDir
@@ -32,11 +42,10 @@ def main (args):
 	print "\n"
 
 	# Split full trajectory in bins (blocks of 1000 pdbs)
-	cmm ="pr01_createBins.py %s %s" % (inputDir, outputDirBins)
-	os.system (cmm)
+	cmm ="pr01_createBins.py %s %s %s" % (inputDir, outputDirBins, SIZEBIN)
+	os.system (cmm) 
 
 	# Get Representatives for each bin
-	createDir (outputDirRepr)
 	cmm = "pr02_reduction.R %s %s %s %s" % (outputDirBins, outputDirRepr, RMSDTHRESHOLD, NCORES)
 	os.system (cmm)
 

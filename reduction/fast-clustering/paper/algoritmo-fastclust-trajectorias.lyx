@@ -5,7 +5,7 @@
 \textclass article
 \use_default_options true
 \maintain_unincluded_children false
-\language spanish
+\language english
 \language_package default
 \inputencoding auto
 \fontencoding global
@@ -56,7 +56,7 @@
 \tocdepth 3
 \paragraph_separation indent
 \paragraph_indentation default
-\quotes_language french
+\quotes_language english
 \papercolumns 1
 \papersides 1
 \paperpagestyle default
@@ -140,7 +140,7 @@ width "100col%"
 special "none"
 height "1in"
 height_special "totalheight"
-status collapsed
+status open
 
 \begin_layout Subsection
 Contexto
@@ -253,6 +253,46 @@ En esta sección describiremos los elementos básicos que se manejan en este
  trabajo, principalmente hablaremos de plegamiento de proteína, simulaciones
  de plegamiento de proteínas, trayectorias de plegamiento y métodos de reducción
  de datos biológicos.
+\end_layout
+
+\begin_layout Subsection
+Métodos de Comparación de Estructuras de Proteínas
+\end_layout
+
+\begin_layout Standard
+Revisar [Kufareva2015]
+\end_layout
+
+\begin_layout Subsubsection
+RMSD
+\end_layout
+
+\begin_layout Subsubsection
+TM-score
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
+\begin_layout Description
+[https://zhanglab.ccmb.med.umich.edu/TM-score/]: TM-score is a metric for measuring
+ the structural similarity of two protein models.
+ It is designed to solve two major problems in the traditional metrics such
+ as root-mean-square deviation (RMSD): (1) TM-score measures the global
+ fold similarity and is less sensitive to the local structural variations;
+ (2) magnitude of TM-score for random structure pairs is length-independent.
+ TM-score has the value in (0,1], where 1 indicates a perfect match between
+ two structures.
+ Following strict statistics of structures in the PDB, scores below 0.17
+ corresponds to randomly chosen unrelated proteins whereas with a score
+ higher than 0.5 assume generally the same fold in SCOP/CATH.
+ 
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Subsection
@@ -652,9 +692,8 @@ Datos y Métodos
 \end_layout
 
 \begin_layout Standard
-Aquí planteamos nuestro algoritmo de agrupamiento rápidos de estructuras
- de proteínas y después describimos las características de la trayectoria
- que utilizamos para realizar la reducción.
+Aquí describimos las características de la trayectoria que utilizamos para
+ realizar la reducción.
 \end_layout
 
 \begin_layout Subsection
@@ -696,8 +735,153 @@ cite {Shaw2010}
  Por cada 
 \end_layout
 
-\begin_layout Subsection
-Algoritmo Rápido de Agrupamiento de Estructuras de Proteínas
+\begin_layout Section
+Algoritmo de Reducción de Trayectorias de Plegamiento
+\end_layout
+
+\begin_layout Standard
+El algoritmo realiza la reducción de una trayectoria en dos fases.
+ En la primera fase se forman grupos de estructuras muy cercanas tanto a
+ nivel de posiciones de los átomos de las estructuras como a nivel de cercanía
+ en el tiempo de aparición dentro de la trayectoria.
+ La métrica que se utiliza en esta fase es el RMSD, que es más sensitivo
+ a las variaciones locales de plegamiento y por lo tanto es una métrica
+ adecuada para agrupar estructuras muy cercanas como las que aparecen de
+ un tiempo a otro en una trayectoria de plegamiento.
+ En la segunda fase se toman las estructuras representativas de lo grupos
+ formados previamente y crea grupos que también tiene en cuenta la posición
+ de los átomos entre las estructuras pero es menos sensible a las variaciones
+ estructurales locales.
+ La métrica para las comparaciones en esta fase es el TM-score que tiene
+ en cuenta las propiedades globales de plegamiento y por lo tanto es adecuada
+ para agrupar estructuras que están más alejadas o separadas tiempos más
+ largos dentro de la trayectoria.
+\end_layout
+
+\begin_layout Standard
+El algoritmo inicia particionando la trayectoría en secciones o
+\emph on
+ bins
+\emph default
+ de 
+\emph on
+N
+\emph default
+ estructuras contiguas en el tiempo.
+ Después sobre cada 
+\emph on
+bin
+\emph default
+ se realiza primero un agrupamiento local rápido y después un agrupamiento
+ global detallado.
+ El agrupamiento rápido aprovecha el ordenamiento temporal de las estructuras
+ implícito en la trayectoría y forma grupos tomando inicialmente la primera
+ estructura del 
+\emph on
+bin 
+\emph default
+(estado inicial) como representativa del primer grupo.
+ La siguiente estructura del 
+\emph on
+bin
+\emph default
+ en orden de tiempo se compara con la representativa usando la métrica RMSD
+ y si el valor está menor que un umbral predeterminado, la estructura se
+ asigna a este primer grupo, de lo contrario se forma uno nuevo que toma
+ a esta ultima estructura como su representativa.
+ Este mismo proceso se sigue con las siguientes estructuras pero teniendo
+ en cuenta que las comparaciones se realizan solo con las estructuras representa
+tivas de cada grupo y no con las estructuras que conforman el grupo, lo
+ cual reduce el número de comparaciones en gran medida frente a un algoritmo
+ convencional de agrupamiento.
+ Además, para evitar más comparaciones, estas se realizan de atrás hacia
+ adelante, es decir, las estructuras se comparan con la representativa del
+ último grupo formado y si no cumple el umbral entonces se compara con el
+ anterior a este y así sucesivamente.
+ Esto se realiza así ya que se supone que a medida que avanza la simulación
+ de plegamiento, las nuevas estructuras de la trayectoria van a ser más
+ parecidas localmente (valores bajos de RMSD) a las últimas que ocurrieron.
+ 
+\end_layout
+
+\begin_layout Standard
+En la segunda fase, el algoritmo toma las estructuras representativas de
+ cada grupo y realiza con ellas un nuevo agrupamiento utilizando la métrica
+ TM-score que tiene en cuenta propiedades globales del plegamiento y que
+ no es tan sensible a variaciones locales como sucede con el RMSD.
+ Este nuevo agrupamiento forma 
+\emph on
+K
+\emph default
+ grupos de los cuales se toman las estructuras centrales o medoides como
+ representativas y que finalmente serán las que después del proceso de reducción
+ representan a todo el 
+\emph on
+bin.
+\end_layout
+
+\begin_layout Standard
+El algoritmo es fácilmente paralelizable ya que una vez particionada la
+ trayectoría el proceso de reducción es el mismo para cada sección o 
+\emph on
+bin, 
+\emph default
+lo que permite que el procesamiento se reparta sobre cada 
+\emph on
+bin
+\emph default
+, es decir, tanto la reducción local como la reducción global se ejecutan
+ al mismo tiempo sobre cada 
+\emph on
+bin
+\emph default
+ y por lo tanto si existen 
+\emph on
+N
+\emph default
+ 
+\emph on
+bins
+\emph default
+, cada uno de ellos se podría asignar a un proceso, hilo, o procesador.
+\end_layout
+
+\begin_layout Section
+Detalles de Implementación
+\end_layout
+
+\begin_layout Standard
+El algoritmo está implementado como a través de tres scripts: 
+\end_layout
+
+\begin_layout Itemize
+pr00_main.py: Script principal en lenguaje Python que toma los parámetros
+ iniciales y llama a los otros scripts envíandole los parámetros necesarios.
+\end_layout
+
+\begin_layout Itemize
+pr01_createBins.py: Script en lenguaje Python que realiza la partición
+\end_layout
+
+\begin_layout Itemize
+pr02_localReduction.R : Script en lenguaje R que realiza la reducción local.
+\end_layout
+
+\begin_layout Itemize
+pr03_globalReduction.R: Script en lenguaje R que realiza la redución global..
+\end_layout
+
+\begin_layout Standard
+La reducción local utiliza la función 
+\emph on
+rmsd 
+\emph default
+de la librería 
+\emph on
+bio3d
+\emph default
+ para el sistema R, y la reducción global utiliza el programa TMscore [http://cs
+sb.biology.gatech.edu/skolnick/webservice/TM-score/index.shtml]
 \end_layout
 
 \begin_layout Section

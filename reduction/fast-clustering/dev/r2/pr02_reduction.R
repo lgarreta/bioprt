@@ -1,6 +1,12 @@
 #!/usr/bin/Rscript
 #!/home/mmartinez/bin/Rscript
 
+# Release 4.0:
+#  - RMSD for partial clustering
+#  - TMscore for full clustering
+#  - Command line parameters: inDir, outDir, RMSD, cores 
+#  - Uses a external program (TMscore)
+
 # Release 3.0
 #  - Load all PDB files instead bin by bin
 #  - Create groups in memory instead in disk
@@ -21,14 +27,15 @@ library (parallel)
 library (cluster)
 options (width=300)
 
-THRESHOLD = 1.3
-NCORES= 1
+#THRESHOLD = 1.3
+#NCORES= 1
 #----------------------------------------------------------
 # Main function
 #----------------------------------------------------------
 main <- function () {
 	args <- commandArgs (TRUE)
-	#args = c("outbins", "outrepr", "1.5", "1")
+	#args = c("io/out1000/outbins", "io/out1000/outrepr", "1.5", "1")
+	print (args)
 	if (length (args) < 4){
 		cat (USAGE)
 		quit (status=1)
@@ -39,6 +46,7 @@ main <- function () {
 	THRESHOLD = as.numeric (args [3])
 	NCORES    = as.numeric (args [4])
 
+	createDir (OUTPUTDIR)
 	binPathLst = list.files (INPUTDIR, pattern="bin", full.names=T)
 	results=mclapply (binPathLst, reduceSingleBin, outputDir=OUTPUTDIR, threshold=THRESHOLD, mc.cores=NCORES)
 	#for (binPath in binPathLst) 
@@ -54,13 +62,62 @@ reduceSingleBin <- function (binPath, outputDir, threshold) {
 	clusDir = (paste (getwd(), outputDir, basename (binPath), sep="/"))
 	createDir (clusDir)		
 
-	pdbsBin <- getPDBFiles (binPath)
+	pdbsBinLst <<- getPDBFiles (binPath)
 	# Fast clustering for bin, writes representatives to clusDir
-	pdbNames = partialClustering (binPath, clusDir, THRESHOLD, pdbsBin)
+	representativePDBNames <<- partialClustering (binPath, clusDir, threshold, pdbsBinLst)
 
 	# Get Medoid from clustir and write to output dir
-	fullClustering (clusDir, outputDir, pdbNames, pdbsBin)
+	#fullClustering (clusDir, outputDir, representativePDBNames, pdbsBinLst)
+	fullClustering (clusDir, outputDir, representativePDBNames, pdbsBinLst)
 	cat ("\n")
+}
+
+	
+#----------------------------------------------------------
+# Clustering around medoids. Return one medoid for all inputs
+#----------------------------------------------------------
+fullClustering <- function (inputDir, outputDir, representativePDBNames, pdbsBinLst) {
+	cat ("\n>>> fullClustering...", inputDir )
+	if (length (representativePDBNames) < 2)
+		medoid = 1
+	else {
+		#rmsdDistanceMatrix   <<- calcRmsdDistMatrix (representativePDBNames, pdbsBinLst)
+		binDir = paste (outputDir, basename (inputDir), sep="/")
+		rmsdDistanceMatrix <<- getTMDistanceMatrix (binDir, pdbsBinLst)
+
+		pamPDBs <<- pam (rmsdDistanceMatrix, k=1, diss=F)
+		medoid <<- pamPDBs$id.med
+	}
+					
+	medoidPath <<- representativePDBNames [medoid]
+	cmm <<- sprintf ("ln -s %s/%s %s/%s", inputDir, medoidPath, outputDir, medoidPath)   
+	system (cmm)
+	scan ()
+
+	return (medoidPath)
+}
+
+#--------------------------------------------------------------
+# Calculate pairwise RMSDs
+#--------------------------------------------------------------
+getTMDistanceMatrix <- function (binDir, pdbsBinLst) {
+	system (paste ("TMscore-distance-matrix.py", binDir))
+	distanceFilename = paste (binDir, ".dist", sep="")
+	matrixTM = read.table (distanceFilename, header=T)
+	distanceMatrixTM =  as.dist (matrixTM)
+	return (distanceMatrixTM)
+}
+
+#--------------------------------------------------------------
+# Calculate pairwise RMSDs
+#--------------------------------------------------------------
+calcRmsdDistMatrix <- function (pdbNames, pdbsBinLst) {
+	pdbObjects = pdbsBinLst [pdbNames,]
+	n <- length (pdbObjects)
+
+	rmsdDistances <- as.dist (rmsd (pdbObjects, ncore=1), diag=T)
+
+	return (rmsdDistances)
 }
 
 #----------------------------------------------------------
@@ -68,67 +125,45 @@ reduceSingleBin <- function (binPath, outputDir, threshold) {
 # Write the links to the representatives in the output dir
 # Return a list with the representative as the first pdb in the group
 #----------------------------------------------------------
-partialClustering <- function (inputDir, outputDir, threshold, pdbsBin) {
-	cat (">>> Partial clustering...")
+partialClustering <- function (inputDir, outputDir, threshold, pdbsBinLst) {
+	cat ("\n>>> Partial clustering... ", inputDir)
 	# Get proteins from input dir
-	inputProteinsLst   = paste (inputDir, rownames (pdbsBin), sep="/")
-	lstRepresentatives = c ()
+	inputProteinsLst   = paste (inputDir, rownames (pdbsBinLst), sep="/")
+	representativePDBsLst = c ()
 	lstGroups = list ()
 	n = length (inputProteinsLst)
 	for (k in 1:n) {
 		protein = basename (inputProteinsLst[[k]]) 
-		if (k==n)
-			groupNumber = -1
-		else
-			groupNumber = getGroupNumberByRmsd (protein, lstGroups, threshold, pdbsBin)
+		groupNumber = getGroupNumberByRmsd (protein, lstGroups, threshold, pdbsBinLst)
 
 		if (groupNumber == -1) {
 			group = list (protein)
 			cmm = sprintf ("ln -s %s/%s/%s %s/%s", getwd(), inputDir, protein, outputDir, basename(protein))
-			cat ("\n>>> ",cmm,"\n")
+			#cat ("\n>>> ",cmm,"\n")
 			system (cmm)
-			lstRepresentatives = append (lstRepresentatives, basename (protein))
+			representativePDBsLst = append (representativePDBsLst, basename (protein))
 			lstGroups = append (lstGroups, list (group), after=0)
 		} else 
 			lstGroups [[groupNumber]] = append (lstGroups[[groupNumber]],protein)
 	} 
-	return (lstRepresentatives)
+	return (representativePDBsLst)
 }	
-
-#----------------------------------------------------------
-# Clustering around medoids. Return one medoid for all inputs
-#----------------------------------------------------------
-fullClustering <- function (inputDir, outputDir, pdbNames, pdbsBin) {
-	cat ("\n>>> fullClustering...", inputDir )
-	if (length (pdbNames) < 2)
-		medoid = 1
-	else {
-		rmsdDistanceMatrix   <<- getRmsdDistanceMatrix (pdbNames, pdbsBin)
-
-		pamPDBs <- pam (rmsdDistanceMatrix, 1, diss=T)
-		medoid = pamPDBs$medoid
-	}
-
-	medoidPath <- pdbNames [medoid]
-	cmm = sprintf ("ln -s %s/%s %s/%s", inputDir, medoidPath, outputDir, medoidPath)   
-	system (cmm)
-
-	return (medoidPath)
-}
 
 #----------------------------------------------------------
 # calculates the protein closest group 
 #----------------------------------------------------------
-getGroupNumberByRmsd <- function (protein, lstGroups, threshold, pdbsBin) {
+getGroupNumberByRmsd <- function (protein, lstGroups, threshold, pdbsBinLst) {
 	groupNumber = -1
 	counter = 1
 	for (group in lstGroups) {
 		localProtein       = group [[1]]
-		localPdbObject     = pdbsBin [basename (localProtein),]
-		referencePdbObject = pdbsBin [basename (protein),]
+		localPdbObject     <<- pdbsBinLst [basename (localProtein),]
+		referencePdbObject <<- pdbsBinLst [basename (protein),]
 
-		rmsdValue = rmsd (localPdbObject, referencePdbObject, fit=T)
-		cat ("\nRMSD:", rmsdValue, "> ", localProtein,", GROUP: ", protein)
+		referencePdbObject = fit.xyz (localPdbObject, referencePdbObject)
+		rmsdValue = rmsd (localPdbObject, referencePdbObject, fit=F)
+		#rmsdValue2 = rmsdPartial (localPdbObject, referencePdbObject, 0.8, 10)
+		#cat ("\nRMSD:", rmsdValue, " > ", localProtein, " GROUP: ", protein)
 
 		if (rmsdValue < threshold) {
 			groupNumber = counter
@@ -136,21 +171,39 @@ getGroupNumberByRmsd <- function (protein, lstGroups, threshold, pdbsBin) {
 		}
 		counter = counter + 1	
 	}	
-	#cat ("\nRMSD: ", rmsdValue, ">>>",  basename (protein), ", ", basename (localProtein), " GROUP: ", groupNumber)
 	return (groupNumber)
 }
 
-#--------------------------------------------------------------
-# Calculate pairwise RMSDs
-#--------------------------------------------------------------
-getRmsdDistanceMatrix <- function (pdbNames, pdbsBin) {
-	pdbObjects = pdbsBin [pdbNames,]
-	n <- length (pdbObjects)
+#----------------------------------------------------------
+# Evaluates the RMSD for each atom positions until it reaches
+# a min number of atoms (minAminos) with RMSD below a threshold 
+#----------------------------------------------------------
+rmsdPartial <- function (loc,ref, rmsdThreshold, minAminos) {
+	print ("-------------------------------------------------------")
+	n = length (ref)
+	k = 0
+	rmsdAvr = 0
+	for (i in seq(1,n,3)) {
+		refBlock  = ref [i: (i+2)]
+		locBlock  = loc [i: (i+2)]
+		#refBlock  = ref 
+		#locBlock  = loc 
 
-	rmsdDistances <- as.dist (rmsd (pdbObjects, ncore=1), diag=T)
+		rmsdValue = rmsd (refBlock, locBlock, fit=F)
+		cat (">>>> ", rmsdValue, " ", k, "\n")
+		cat ("loc: "); print (locBlock) 
+		cat ("ref: "); print (refBlock)
 
-	return (rmsdDistances)
+		if (rmsdValue < 20) {
+			k = k + 1
+			rmsdAvr = rmsdAvr + rmsdValue
+		}
+		if (k >= minAminos)
+			break;
+	}
+	return (rmsdAvr/(k))
 }
+	
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 preparePdbObjects <- function (pdbObjects) {
@@ -184,7 +237,7 @@ getPDBFiles <- function (inputDir) {
 	pdbNames <- list.files (inputDir, full.names=T)
 
 	# Load PDB Objects
-	pdbObjects <- mclapply (X=pdbNames, FUN=read.pdb2, mc.cores=NCORES)
+	pdbObjects <- mclapply (X=pdbNames, FUN=read.pdb2, mc.cores=1)
 	names (pdbObjects) <- basename (pdbNames)
 	pdbObjects <- preparePdbObjects (pdbObjects)
 	return (pdbObjects)

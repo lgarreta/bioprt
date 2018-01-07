@@ -1,11 +1,11 @@
 #!/usr/bin/Rscript
 
-# Test for calculting the fractal dimension of a reduction
-# The calculation uses the RMSD values for each point (frame or structure)
+# Reduces a protein folding trajectory by three
+# methods: medoids, static and random
 
 library (bio3d)
 library (parallel)
-library (fractaldim)
+library (cluster)
 
 source ("libs/createDir.R")
 source ("libs/splitFilesToBins.R")
@@ -18,7 +18,7 @@ tmpDir = "/dev/shm"
 # Main function
 #--------------------------------------------------------------
 main <- function (args) {
-	#args = c("shm/1FCA0")
+	#args = c("shm/1FCA1")
 	if (length (args) < 1) {
 		cat (USAGE)
 		quit ()
@@ -34,17 +34,14 @@ main <- function (args) {
 
 	cat ("\nCalculating RMSDs\n")
 	rmsdDistances <- calculateRMSD (pdbObjects)
-	x=rmsdDistances [,1]
-	y=rmsdDistances [,2]
 
-	#x = c(0.6073672, 0.6837522, 0.5109583, 0.4456634, 0.6773562, 0.6593706, 0.5778927, 0.3655071, 0.4694057, 0.4258961)
-	#y = c(0.666398, 0.6080113, 0.607199, 0.2165213, 0.6667185, 0.6774323, 0.7234859, 0.3496862, 0.2875728, 0.4424538)
+	mds <- cmdscale (rmsdDistances)
 
-	f=fd.estim.boxcount(cbind (x,y),plot.loglog=TRUE, plot.allpoints=TRUE, nlags="auto")
-
-	cat ("\nFD: ", f$fd)
-
-	#print (rmsdDistances)
+	pdf (file=sprintf ("%s/%s", outputDir,"pca.pdf"))
+		colors = rainbow (n,start=.2,end=.1)
+		colors2 = heat.colors (n, alpha=1)
+		plot (mds, type="p", pch=21, col=colors,bg=colors)
+	dev.off ()
 }
 #--------------------------------------------------------------
 # Calculate the RMSD between two protein structures
@@ -52,7 +49,7 @@ main <- function (args) {
 calculateRMSD <- function (pdbObjects) {
 	n = length (pdbObjects$pdbs)
 	pdbRef     <- pdbObjects$pdbs [[n]]
-	matRMSDs = matrix (nrow=n, ncol=2)
+	matRMSDs = matrix (nrow=n, ncol=n)
 
 	ref    <- pdbRef
 	refCAs <- atom.select (ref, elety="CA", verbose=FALSE)
@@ -63,10 +60,11 @@ calculateRMSD <- function (pdbObjects) {
 		trgx   <- trg$xyz [trgCAs$xyz]
 		
 		rm       <- rmsd (trgx, refx, fit=T)
-		matRMSDs [i,] = c(i, rm)
+		matRMSDs [i,] = rm
 	}
 
-	return (matRMSDs)
+	print (round (matRMSDs,2))
+	return (as.dist (matRMSDs))
 }
 #--------------------------------------------------------------
 # Calculate pairwise RMSDs

@@ -3,41 +3,43 @@
 USAGE="\
 Split the files of an input directory in bins according to the\n\
 size of the bin. The bins are put in an output directory\n\
-USAGE: createBins.py <inputDir> <outputDir>\n"
+USAGE: createBins.py <inputDir> <outputDir> <sizeBin>\n"
 
 import os, sys, math
-SIZEBIN  = 100   # Number of files for each bin
-SIZEFILL = 6      # Number of zeros to fill bin names
+#SIZEBIN  = 100   # Number of files for each bin
 
 #--------------------------------------------------------
 # Main function to be called from command line
 #--------------------------------------------------------
 def main (args):
-    if len (args) < 3:
-        print USAGE
-        sys.exit (1)
+	if len (args) < 4:
+		print USAGE
+		sys.exit (1)
 
-    inputDir  = "%s/%s" % (os.getcwd (), args [1])
-    outputDir = "%s/%s" % (os.getcwd (), args [2])
+	inputDir  = "%s/%s" % (os.getcwd (), args [1])
+	outputDir = "%s/%s" % (os.getcwd (), args [2])
+	SIZEBIN   = int (args [3]) 
 
-    createDir (outputDir)
+	createDir (outputDir)
 
-    createBins (inputDir, outputDir, SIZEBIN, SIZEFILL)
+	createBins (inputDir, outputDir, SIZEBIN)
 
 #--------------------------------------------------------
 # Creates bins from files in an input dir 
 # outputDir: destiny dir for bins
 # binSize is the number of file by bin
-# binFill is the prefix for each bin filename
+# sizeFill is the prefix for each bin filename
 #--------------------------------------------------------
-def createBins (inputDir, outputDir, binSize, binFill):
+def createBins (inputDir, outputDir, binSize):
 	inputFiles  = getSortedFilesDir (inputDir, ".pdb")
+	n = len (inputFiles)
+	sizeFill = len (str(n))
 	binList = splitBins (inputFiles, binSize)
 
 	for k,lst in enumerate (binList):
 		binNumber = k+1
 		print ">>> Creating bin %s..." % binNumber
-		binDirname = "%s/%s%s" % (outputDir, "bin", str (binNumber).zfill (binFill))
+		binDirname = "%s/%s%s" % (outputDir, "bin", str (binNumber).zfill (sizeFill))
 		os.mkdir (binDirname)
 		for filename in lst:
 			sourceFilename  = "%s/%s" % (inputDir, filename)
@@ -57,7 +59,7 @@ def splitBins (inputFiles, binSize):
 	for k in range (nBins):
 		start = k*binSize
 		end   = start + binSize 
-		if k < binSize-1:
+		if k < nBins-1:
 			binList.append (inputFiles [start:end])
 		else:
 			binList.append (inputFiles [start:])
@@ -89,4 +91,4 @@ def getSortedFilesDir (inputDir, pattern=""):
 # Call main with input parameter
 #--------------------------------------------------------------------
 if __name__ == "__main__":
-    main (sys.argv)
+	main (sys.argv)
