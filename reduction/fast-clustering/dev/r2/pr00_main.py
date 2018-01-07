@@ -12,10 +12,15 @@ USAGE  = "\nReduces a trayectory using a fast clustering"
 USAGE += "\nUSAGE   : pr00_main.py <inputDir> <outputDir> <RMSD> <SizeBin> <nCores>"
 USAGE += "\nExample : pr00_main.py in1000 out1000 1.5 100 4"
 
+<<<<<<< HEAD:reduction/fast-clustering/dev/r2/pr00_main.py
 # Constant values
 RMSDTHRESHOLD = 1.5   # Threshold for RMSD comparison between structures"
 NCORES	      = 4     # Number of cores for multiprocessing
 SIZEBIN       = 1000  # Number of files for each bin
+=======
+RMSDTHRESHOLD = 1.5
+NCORES	= 1
+>>>>>>> 2e9de697dffaed7d20883ecaad15405e1598a2b4:reduction/fast-clustering/dev/red1/pr00_main.py
 
 def main (args):
 	if len (args) < 6:
@@ -42,11 +47,20 @@ def main (args):
 	print "\n"
 
 	# Split full trajectory in bins (blocks of 1000 pdbs)
+<<<<<<< HEAD:reduction/fast-clustering/dev/r2/pr00_main.py
 	cmm ="pr01_createBins.py %s %s %s" % (inputDir, outputDirBins, SIZEBIN)
 	os.system (cmm) 
 
 	# Get Representatives for each bin
 	cmm = "pr02_reduction.R %s %s %s %s" % (outputDirBins, outputDirRepr, RMSDTHRESHOLD, NCORES)
+=======
+	cmm ="python pr01_createBins.py %s %s" % (inputDir, outputDirBins)
+	os.system (cmm)
+
+	# Get Representatives for each bin
+	createDir (outputDirRepr)
+	cmm = "./pr02_reduction.R %s %s %s %s" % (outputDirBins, outputDirRepr, RMSDTHRESHOLD, NCORES)
+>>>>>>> 2e9de697dffaed7d20883ecaad15405e1598a2b4:reduction/fast-clustering/dev/red1/pr00_main.py
 	os.system (cmm)
 
 #------------------------------------------------------------------
